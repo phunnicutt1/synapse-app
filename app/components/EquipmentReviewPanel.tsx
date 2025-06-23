@@ -1,8 +1,8 @@
 'use client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '@/hooks/useAppStore';
-import { EquipmentSource, EquipmentSignature } from '@/interfaces/bacnet';
-import { useState, useEffect } from 'react';
+import { EquipmentSource, EquipmentSignature, BacnetPoint } from '@/interfaces/bacnet';
+import { useState, useEffect, useMemo } from 'react';
 
 const fetchEquipmentById = async (equipmentId: string): Promise<EquipmentSource> => {
   const res = await fetch(`/api/equipment/${equipmentId}`);
@@ -16,6 +16,254 @@ const fetchSignatures = async (): Promise<EquipmentSignature[]> => {
   return res.json();
 };
 
+// Point categorization based on semantic classification
+const categorizePoint = (point: BacnetPoint): string => {
+  if (point.semanticMetadata?.equipmentSpecific) {
+    const classification = point.semanticMetadata.reasoning.find(r => 
+      r.includes('Temperature') || r.includes('Pressure') || r.includes('Flow') || 
+      r.includes('Status') || r.includes('Speed') || r.includes('Occupancy')
+    );
+    if (classification) {
+      if (classification.includes('Temperature')) return 'Temperature';
+      if (classification.includes('Pressure')) return 'Pressure';
+      if (classification.includes('Flow') || classification.includes('Airflow')) return 'Airflow';
+      if (classification.includes('Status') || classification.includes('Occupancy')) return 'Status';
+      if (classification.includes('Speed') || classification.includes('Fan')) return 'Control';
+    }
+  }
+  
+  // Fallback to basic categorization based on point properties
+  if (point.writable) return 'Setpoint';
+  if (point.kind === 'Bool') return 'Status';
+  if (point.unit) return 'Sensor';
+  return 'Other';
+};
+
+// Get confidence badge styling
+const getConfidenceBadge = (confidence?: number) => {
+  if (!confidence) return { color: 'bg-gray-100 text-gray-600', text: 'No Data' };
+  if (confidence >= 90) return { color: 'bg-green-100 text-green-800', text: `${confidence}%` };
+  if (confidence >= 70) return { color: 'bg-yellow-100 text-yellow-800', text: `${confidence}%` };
+  return { color: 'bg-red-100 text-red-800', text: `${confidence}%` };
+};
+
+// Enhanced point card component
+interface PointCardProps {
+  point: BacnetPoint;
+  index: number;
+  isExpanded: boolean;
+  searchTerm: string;
+  onConfidenceAdjust: (pointId: string, newConfidence: number) => void;
+}
+
+const PointCard: React.FC<PointCardProps> = ({ 
+  point, 
+  index, 
+  isExpanded, 
+  searchTerm,
+  onConfidenceAdjust 
+}) => {
+  const [isAdjustingConfidence, setIsAdjustingConfidence] = useState(false);
+  const [tempConfidence, setTempConfidence] = useState(point.normalizationConfidence || 0);
+  
+  const category = categorizePoint(point);
+  const confidenceBadge = getConfidenceBadge(point.normalizationConfidence);
+  
+  const highlightText = (text: string, searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 2) return text;
+    
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, i) => 
+      regex.test(part) ? (
+        <mark key={i} className="bg-yellow-200 px-1 rounded">{part}</mark>
+      ) : part
+    );
+  };
+
+  const handleConfidenceSubmit = () => {
+    onConfidenceAdjust(point.id, tempConfidence);
+    setIsAdjustingConfidence(false);
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all">
+      <div className="p-4">
+        {/* Point Header */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 min-w-0">
+            {/* Original Name */}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs text-gray-500 font-medium">ORIGINAL:</span>
+              <span className="font-medium text-gray-800 truncate">
+                {highlightText(point.dis, searchTerm)}
+              </span>
+            </div>
+            
+            {/* Normalized Name */}
+            {point.normalizedName ? (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-blue-600 font-medium">NORMALIZED:</span>
+                <span className="font-semibold text-blue-800 truncate">
+                  {highlightText(point.normalizedName, searchTerm)}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-gray-400 font-medium">NORMALIZED:</span>
+                <span className="text-gray-400 italic text-sm">Not normalized</span>
+              </div>
+            )}
+            
+            {/* Description */}
+            <div className="text-sm text-gray-600 truncate">
+              {highlightText(point.bacnetDesc, searchTerm)}
+            </div>
+          </div>
+          
+          {/* Point Metadata Badges */}
+          <div className="flex flex-col items-end gap-1 ml-2">
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+              category === 'Temperature' ? 'bg-red-100 text-red-700' :
+              category === 'Pressure' ? 'bg-purple-100 text-purple-700' :
+              category === 'Airflow' ? 'bg-blue-100 text-blue-700' :
+              category === 'Status' ? 'bg-green-100 text-green-700' :
+              category === 'Control' ? 'bg-orange-100 text-orange-700' :
+              category === 'Setpoint' ? 'bg-indigo-100 text-indigo-700' :
+              category === 'Sensor' ? 'bg-teal-100 text-teal-700' :
+              'bg-gray-100 text-gray-700'
+            }`}>
+              {category}
+            </span>
+            
+            {/* Confidence Badge */}
+            <div className="flex items-center gap-1">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${confidenceBadge.color}`}>
+                {confidenceBadge.text}
+              </span>
+              {point.normalizationConfidence && (
+                <button
+                  onClick={() => setIsAdjustingConfidence(!isAdjustingConfidence)}
+                  className="text-xs text-gray-500 hover:text-gray-700 p-1"
+                  title="Adjust confidence"
+                >
+                  ⚙️
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Point Properties */}
+        <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+          <span className="flex items-center gap-1">
+            <span className="font-medium">Type:</span> {point.kind}
+          </span>
+          {point.unit && (
+            <span className="flex items-center gap-1">
+              <span className="font-medium">Unit:</span> {point.unit}
+            </span>
+          )}
+          <span className={`px-2 py-1 rounded ${
+            point.writable ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+          }`}>
+            {point.writable ? 'Writable' : 'Read-Only'}
+          </span>
+        </div>
+
+        {/* Haystack Tags */}
+        {point.haystackTags && point.haystackTags.length > 0 && (
+          <div className="mb-3">
+            <div className="text-xs font-medium text-gray-700 mb-1">Haystack Tags:</div>
+            <div className="flex flex-wrap gap-1">
+              {point.haystackTags.map((tag, idx) => (
+                <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded border border-blue-200">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Confidence Adjustment */}
+        {isAdjustingConfidence && (
+          <div className="mb-3 p-3 bg-gray-50 rounded border">
+            <div className="text-xs font-medium text-gray-700 mb-2">Adjust Normalization Confidence:</div>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={tempConfidence}
+                onChange={(e) => setTempConfidence(parseInt(e.target.value))}
+                className="flex-1"
+              />
+              <span className="text-sm font-medium w-12">{tempConfidence}%</span>
+              <button
+                onClick={handleConfidenceSubmit}
+                className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+              >
+                Apply
+              </button>
+              <button
+                onClick={() => setIsAdjustingConfidence(false)}
+                className="px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Expanded Details */}
+        {isExpanded && (
+          <div className="pt-3 border-t border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              {/* Basic Properties */}
+              <div className="space-y-2">
+                <h6 className="font-medium text-gray-700">Properties</h6>
+                <div className="space-y-1 text-gray-600">
+                  <div><span className="font-medium">BACnet Current:</span> {point.bacnetCur}</div>
+                  <div><span className="font-medium">Point ID:</span> {point.id}</div>
+                  <div><span className="font-medium">Writable:</span> {point.writable ? 'Yes' : 'No'}</div>
+                </div>
+              </div>
+
+              {/* Semantic Metadata */}
+              {point.semanticMetadata && (
+                <div className="space-y-2">
+                  <h6 className="font-medium text-gray-700">Semantic Analysis</h6>
+                  <div className="space-y-1 text-gray-600">
+                    <div>
+                      <span className="font-medium">Vendor Specific:</span> 
+                      {point.semanticMetadata.vendorSpecific ? ' Yes' : ' No'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Equipment Specific:</span> 
+                      {point.semanticMetadata.equipmentSpecific ? ' Yes' : ' No'}
+                    </div>
+                    {point.semanticMetadata.reasoning && point.semanticMetadata.reasoning.length > 0 && (
+                      <div>
+                        <span className="font-medium">Reasoning:</span>
+                        <ul className="list-disc list-inside ml-2 mt-1">
+                          {point.semanticMetadata.reasoning.map((reason, idx) => (
+                            <li key={idx} className="text-xs">{reason}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export function EquipmentReviewPanel() {
   const { 
     selectedEquipmentId, 
@@ -26,6 +274,9 @@ export function EquipmentReviewPanel() {
   
   const [selectedSignatureId, setSelectedSignatureId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [confidenceFilter, setConfidenceFilter] = useState<'all' | 'high' | 'medium' | 'low' | 'none'>('all');
+  const [normalizationFilter, setNormalizationFilter] = useState<'all' | 'normalized' | 'not-normalized'>('all');
   const queryClient = useQueryClient();
 
   const { data: equipment, isLoading, error } = useQuery({
@@ -52,6 +303,88 @@ export function EquipmentReviewPanel() {
       setSelectedSignatureId('');
     }
   }, [appliedSignature, equipment?.id]);
+
+  // Point categorization and filtering
+  const categorizedPoints = useMemo(() => {
+    if (!equipment) return {};
+    
+    const categories: Record<string, BacnetPoint[]> = {};
+    equipment.points.forEach(point => {
+      const category = categorizePoint(point);
+      if (!categories[category]) categories[category] = [];
+      categories[category].push(point);
+    });
+    
+    return categories;
+  }, [equipment]);
+
+  const availableCategories = useMemo(() => {
+    return Object.keys(categorizedPoints).sort();
+  }, [categorizedPoints]);
+
+  // Filter signatures compatible with this equipment type
+  const compatibleSignatures = signatures?.filter(sig => 
+    sig.equipmentType === equipment?.equipmentType
+  ) || [];
+
+  // Filter points to show only those in the applied signature
+  const signatureFilteredPoints = equipment?.points.filter(point => {
+    if (!appliedSignature) return true; // Show all points if no signature applied
+    
+    // Check if this point matches any point in the signature
+    return appliedSignature.pointSignature.some(sigPoint => 
+      sigPoint.dis === point.dis && 
+      sigPoint.kind === point.kind && 
+      (sigPoint.unit || '') === (point.unit || '')
+    );
+  }) || [];
+
+  // Apply all filters
+  const displayPoints = useMemo(() => {
+    let filtered = signatureFilteredPoints;
+
+    // Search filter
+    if (searchTerm.length >= 2) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(point => {
+        const nameMatch = point.dis.toLowerCase().includes(searchLower);
+        const normalizedMatch = point.normalizedName?.toLowerCase().includes(searchLower);
+        const descMatch = point.bacnetDesc.toLowerCase().includes(searchLower);
+        const tagMatch = point.haystackTags?.some(tag => tag.toLowerCase().includes(searchLower));
+        
+        return nameMatch || normalizedMatch || descMatch || tagMatch;
+      });
+    }
+
+    // Category filter
+    if (categoryFilter) {
+      filtered = filtered.filter(point => categorizePoint(point) === categoryFilter);
+    }
+
+    // Confidence filter
+    if (confidenceFilter !== 'all') {
+      filtered = filtered.filter(point => {
+        const confidence = point.normalizationConfidence;
+        switch (confidenceFilter) {
+          case 'high': return confidence && confidence >= 80;
+          case 'medium': return confidence && confidence >= 50 && confidence < 80;
+          case 'low': return confidence && confidence < 50;
+          case 'none': return !confidence;
+          default: return true;
+        }
+      });
+    }
+
+    // Normalization filter
+    if (normalizationFilter !== 'all') {
+      filtered = filtered.filter(point => {
+        const hasNormalization = !!point.normalizedName;
+        return normalizationFilter === 'normalized' ? hasNormalization : !hasNormalization;
+      });
+    }
+
+    return filtered;
+  }, [signatureFilteredPoints, searchTerm, categoryFilter, confidenceFilter, normalizationFilter]);
 
   const handleApplySignature = async () => {
     if (!equipment) return;
@@ -82,7 +415,7 @@ export function EquipmentReviewPanel() {
         if (signature) {
           // First, remove equipment from any existing signatures
           if (appliedSignature && appliedSignature.id !== selectedSignatureId) {
-            const removeRes = await fetch('/api/signatures', {
+            await fetch('/api/signatures', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -118,33 +451,30 @@ export function EquipmentReviewPanel() {
     }
   };
 
-  // Filter signatures compatible with this equipment type
-  const compatibleSignatures = signatures?.filter(sig => 
-    sig.equipmentType === equipment?.equipmentType
-  ) || [];
+  const handleConfidenceAdjust = async (pointId: string, newConfidence: number) => {
+    // TODO: Implement confidence adjustment API call
+    console.log(`Adjusting confidence for point ${pointId} to ${newConfidence}%`);
+    // This would typically update the point's normalizationConfidence in the backend
+  };
 
-  // Filter points to show only those in the applied signature
-  const signatureFilteredPoints = equipment?.points.filter(point => {
-    if (!appliedSignature) return true; // Show all points if no signature applied
+  // Statistics for normalization summary
+  const normalizationStats = useMemo(() => {
+    if (!equipment) return null;
     
-    // Check if this point matches any point in the signature
-    return appliedSignature.pointSignature.some(sigPoint => 
-      sigPoint.dis === point.dis && 
-      sigPoint.kind === point.kind && 
-      (sigPoint.unit || '') === (point.unit || '')
-    );
-  }) || [];
-
-  // Further filter by search term (only if 2+ characters)
-  const displayPoints = signatureFilteredPoints.filter(point => {
-    if (searchTerm.length < 2) return true; // Show all if search term too short
+    const totalPoints = equipment.points.length;
+    const normalizedPoints = equipment.points.filter(p => p.normalizedName).length;
+    const averageConfidence = equipment.points
+      .filter(p => p.normalizationConfidence)
+      .reduce((sum, p) => sum + (p.normalizationConfidence || 0), 0) / 
+      Math.max(1, equipment.points.filter(p => p.normalizationConfidence).length);
     
-    const searchLower = searchTerm.toLowerCase();
-    const nameMatch = point.dis.toLowerCase().includes(searchLower);
-    const descMatch = point.bacnetDesc.toLowerCase().includes(searchLower);
-    
-    return nameMatch || descMatch;
-  });
+    return {
+      totalPoints,
+      normalizedPoints,
+      normalizationRate: Math.round((normalizedPoints / totalPoints) * 100),
+      averageConfidence: Math.round(averageConfidence)
+    };
+  }, [equipment]);
 
   return (
     <div className="panel">
@@ -196,6 +526,18 @@ export function EquipmentReviewPanel() {
                         <div>Connection: {equipment.connState}</div>
                       )}
                       <div>Total Points: {equipment.points.length}</div>
+                      
+                      {/* Normalization Summary */}
+                      {normalizationStats && (
+                        <div className="mt-2 p-2 bg-blue-100 rounded border border-blue-200">
+                          <div className="text-xs font-medium text-blue-700 mb-1">Normalization Summary:</div>
+                          <div className="text-xs text-blue-600 space-y-1">
+                            <div>Normalized: {normalizationStats.normalizedPoints}/{normalizationStats.totalPoints} points ({normalizationStats.normalizationRate}%)</div>
+                            <div>Average Confidence: {normalizationStats.averageConfidence}%</div>
+                          </div>
+                        </div>
+                      )}
+                      
                       {equipment.fullDescription && (
                         <div className="mt-2 p-2 bg-blue-100 rounded border border-blue-200">
                           <div className="text-xs font-medium text-blue-700 mb-1">Full Description:</div>
@@ -282,8 +624,8 @@ export function EquipmentReviewPanel() {
                 <div className="flex justify-between items-center">
                   <h5 className="font-medium text-gray-700">
                     {appliedSignature 
-                      ? `Tracked Points (${displayPoints.length}${searchTerm.length >= 2 ? ` of ${signatureFilteredPoints.length}` : ''})` 
-                      : `Equipment Points (${displayPoints.length}${searchTerm.length >= 2 ? ` of ${equipment.points.length}` : ''})`
+                      ? `Tracked Points (${displayPoints.length}${searchTerm.length >= 2 || categoryFilter || confidenceFilter !== 'all' || normalizationFilter !== 'all' ? ` filtered` : ''})` 
+                      : `Equipment Points (${displayPoints.length}${searchTerm.length >= 2 || categoryFilter || confidenceFilter !== 'all' || normalizationFilter !== 'all' ? ` filtered` : ''})`
                     }
                   </h5>
                   <button
@@ -296,80 +638,104 @@ export function EquipmentReviewPanel() {
                   </button>
                 </div>
                 
-                {/* Search Bar */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search points by name or description..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                {/* Enhanced Search and Filters */}
+                <div className="space-y-3">
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search points by name, normalized name, description, or tags..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Filter Controls */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {/* Category Filter */}
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <option value="">All Categories</option>
+                      {availableCategories.map(category => (
+                        <option key={category} value={category}>
+                          {category} ({categorizedPoints[category]?.length || 0})
+                        </option>
+                      ))}
+                    </select>
+                    
+                    {/* Confidence Filter */}
+                    <select
+                      value={confidenceFilter}
+                      onChange={(e) => setConfidenceFilter(e.target.value as any)}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="all">All Confidence</option>
+                      <option value="high">High (80%+)</option>
+                      <option value="medium">Medium (50-79%)</option>
+                      <option value="low">Low (&lt;50%)</option>
+                      <option value="none">No Data</option>
+                    </select>
+                    
+                    {/* Normalization Filter */}
+                    <select
+                      value={normalizationFilter}
+                      onChange={(e) => setNormalizationFilter(e.target.value as any)}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="all">All Points</option>
+                      <option value="normalized">Normalized Only</option>
+                      <option value="not-normalized">Not Normalized</option>
+                    </select>
+                  </div>
+                  
+                  {/* Clear Filters */}
+                  {(searchTerm || categoryFilter || confidenceFilter !== 'all' || normalizationFilter !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setCategoryFilter('');
+                        setConfidenceFilter('all');
+                        setNormalizationFilter('all');
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Clear all filters
                     </button>
                   )}
                 </div>
                 
-                {searchTerm.length >= 2 && displayPoints.length === 0 && (
+                {(searchTerm.length >= 2 || categoryFilter || confidenceFilter !== 'all' || normalizationFilter !== 'all') && displayPoints.length === 0 && (
                   <div className="text-sm text-gray-500 italic">
-                    No points found matching "{searchTerm}"
+                    No points found matching current filters
                   </div>
                 )}
               </div>
             
               <div className="flex-1 overflow-y-auto">
-                <div className="p-4 space-y-2">
+                <div className="p-4 space-y-3">
                   {displayPoints.map((point, index) => (
-                    <div key={index} className={`bg-white rounded border transition-all ${
-                      expandedEquipmentId === equipment.id ? 'p-3' : 'p-2'
-                    }`}>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <span className="w-2 h-2 bg-green-400 rounded-full mr-3 flex-shrink-0"></span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-800 truncate">{point.dis}</span>
-                            <span className="text-xs text-gray-500 truncate">- {point.bacnetDesc}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
-                          <span className="text-xs text-gray-500">{point.kind}</span>
-                          {point.unit && <span className="text-xs text-gray-500">{point.unit}</span>}
-                          <span className={`text-xs px-1 rounded ${
-                            point.writable ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {point.writable ? 'W' : 'R'}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {expandedEquipmentId === equipment.id && (
-                        <div className="mt-2 pt-2 border-t border-gray-100">
-                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                            <div>
-                              <span className="font-medium">BACnet Current:</span> {point.bacnetCur}
-                            </div>
-                            <div>
-                              <span className="font-medium">Kind:</span> {point.kind}
-                            </div>
-                            {point.unit && (
-                              <div>
-                                <span className="font-medium">Unit:</span> {point.unit}
-                              </div>
-                            )}
-                            <div className="col-span-2">
-                              <span className="font-medium">Description:</span> {point.bacnetDesc}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    <PointCard
+                      key={point.id}
+                      point={point}
+                      index={index}
+                      isExpanded={expandedEquipmentId === equipment.id}
+                      searchTerm={searchTerm}
+                      onConfidenceAdjust={handleConfidenceAdjust}
+                    />
                   ))}
                 </div>
               </div>

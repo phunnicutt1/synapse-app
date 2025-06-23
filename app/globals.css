@@ -49,3 +49,233 @@ body {
 .item-card-subtitle {
   @apply text-sm text-gray-500;
 }
+
+/* Filter Pills Styles */
+.filter-pill {
+  @apply inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer;
+  @apply bg-gray-100 text-gray-600 border-2 border-transparent;
+}
+
+.filter-pill:hover {
+  @apply bg-gray-200;
+}
+
+.filter-pill.active {
+  @apply border-2;
+}
+
+.filter-pill.active.all {
+  @apply bg-blue-100 text-blue-800 border-blue-300;
+}
+
+.filter-pill.active.mapped {
+  @apply bg-green-100 text-green-800 border-green-300;
+}
+
+.filter-pill.active.unmapped {
+  @apply bg-red-100 text-red-800 border-red-300;
+}
+
+.filter-pill:not(.active):hover.mapped {
+  @apply bg-green-50;
+}
+
+.filter-pill:not(.active):hover.unmapped {
+  @apply bg-red-50;
+}
+
+.filter-pill-count {
+  @apply ml-2 px-1.5 py-0.5 bg-white bg-opacity-70 rounded-full text-xs font-semibold;
+}
+
+/* Status Indicators */
+.status-indicator {
+  @apply inline-flex items-center px-2 py-1 rounded-md border text-xs;
+}
+
+.status-indicator.mapped {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.status-indicator.unmapped {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+.status-indicator.auto-assigned {
+  @apply bg-blue-100 text-blue-800 border-blue-200;
+}
+
+.status-indicator-icon {
+  @apply mr-1 text-xs;
+}
+
+.status-indicator-label {
+  @apply text-xs font-medium;
+}
+
+.status-indicator-mapping {
+  @apply ml-1 text-xs opacity-75;
+}
+
+/* Enhanced Item Cards for Equipment Status */
+.item-card.mapped {
+  @apply bg-green-50 border-green-300;
+}
+
+.item-card.unmapped {
+  @apply bg-white border-gray-200;
+}
+
+.item-card.auto-assigned {
+  @apply bg-blue-50 border-blue-300;
+}
+
+.item-card.mapped:hover,
+.item-card.auto-assigned:hover {
+  @apply shadow-md;
+}
+
+/* Mapping Details Section */
+.mapping-details {
+  @apply text-xs bg-white bg-opacity-50 rounded p-2;
+}
+
+.mapping-details-row {
+  @apply flex items-center justify-between;
+}
+
+.mapping-details-label {
+  @apply text-gray-600;
+}
+
+.mapping-details-value {
+  @apply font-medium text-gray-800;
+}
+
+.mapping-details-confidence {
+  @apply font-medium text-blue-700;
+}
+
+/* Action Buttons */
+.action-button {
+  @apply px-3 py-1.5 text-sm rounded-md transition-colors flex items-center;
+}
+
+.action-button.map {
+  @apply bg-green-500 text-white hover:bg-green-600 disabled:bg-gray-300;
+}
+
+.action-button.unmap {
+  @apply bg-red-500 text-white hover:bg-red-600;
+}
+
+.action-button.review {
+  @apply bg-blue-500 text-white hover:bg-blue-600;
+}
+
+.action-button-icon {
+  @apply mr-1;
+}
+
+/* Loading and Empty States */
+.loading-state {
+  @apply flex items-center justify-center py-8;
+}
+
+.error-state {
+  @apply p-3 bg-red-50 border border-red-200 rounded-md text-red-800 text-sm;
+}
+
+.empty-state {
+  @apply flex items-center justify-center py-8;
+}
+
+.empty-state-content {
+  @apply text-center text-gray-500;
+}
+
+.empty-state-icon {
+  @apply text-lg mb-2;
+}
+
+.empty-state-action {
+  @apply mt-2 text-blue-600 hover:text-blue-800 text-sm underline;
+}
+
+/* Helper Messages */
+.helper-message {
+  @apply p-3 rounded-md text-sm;
+}
+
+.helper-message.info {
+  @apply bg-amber-50 border border-amber-200 text-amber-800;
+}
+
+.helper-message.success {
+  @apply bg-green-50 border border-green-200 text-green-800;
+}
+
+.helper-message.warning {
+  @apply bg-orange-50 border border-orange-200 text-orange-800;
+}
+
+.helper-message-icon {
+  @apply mr-2;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .filter-pill {
+    @apply text-xs px-2 py-1;
+  }
+  
+  .filter-pill-count {
+    @apply ml-1 px-1 py-0.5;
+  }
+  
+  .status-indicator {
+    @apply px-1.5 py-0.5;
+  }
+  
+  .action-button {
+    @apply px-2 py-1 text-xs;
+  }
+  
+  .item-card {
+    @apply p-2;
+  }
+  
+  .mapping-details {
+    @apply p-1.5;
+  }
+}
+
+/* Animation for filter transitions */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-transition {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Pulse animation for loading states */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.loading-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

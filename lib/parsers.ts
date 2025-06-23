@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import { Connector, BacnetPoint, EquipmentSource } from '@/interfaces/bacnet';
+import { normalizationEngine } from './normalization';
 
 // Define known primary fields and descriptive field patterns
 const PRIMARY_FIELDS = new Set(['id', 'dis', 'connStatus']);
@@ -293,6 +294,82 @@ export function parseTrioFile(
     else equipmentType = firstSegment.toUpperCase();
   }
 
+  // Extract semantic metadata from connector for enhanced normalization
+  const semanticMetadata = extractSemanticMetadata(connector);
+  
+  console.log(`Semantic metadata for ${equipmentId}:`, {
+    vendor: semanticMetadata.vendorRules?.name || 'Unknown',
+    equipment: semanticMetadata.equipmentStrategy?.contextPrefix || 'Unknown',
+    deviceContext: semanticMetadata.deviceContext,
+    confidenceModifiers: semanticMetadata.confidenceModifiers
+  });
+
+  // Apply enhanced normalization to all points with semantic context
+  console.log(`Applying enhanced normalization to ${points.length} points for ${equipmentId}`);
+  const { normalizations, classifications } = normalizationEngine.batchNormalizePointsSync(
+    points, 
+    connector, 
+    equipmentType
+  );
+
+  // Update points with enhanced normalization data including semantic metadata
+  points.forEach((point, index) => {
+    const normalization = normalizations[index];
+    const classification = classifications[index];
+    
+    // Apply semantic classification for enhanced point typing
+    const semanticClassification = classifyPointWithSemanticMetadata(
+      point.dis || point.bacnetDesc || '',
+      connector,
+      semanticMetadata
+    );
+    
+    // Use semantic classification if it provides higher confidence
+    const finalNormalizedName = semanticClassification.confidence > normalization.confidence
+      ? semanticClassification.pointType
+      : normalization.normalizedName;
+      
+    const finalConfidence = Math.max(normalization.confidence, semanticClassification.confidence);
+    
+    // Merge tags from both approaches
+    const combinedTags = [...new Set([
+      ...normalization.tags,
+      ...semanticClassification.tags
+    ])];
+    
+    point.normalizedName = finalNormalizedName;
+    point.haystackTags = combinedTags;
+    point.normalizationConfidence = finalConfidence;
+    
+    // Add semantic metadata to point
+    point.semanticMetadata = {
+      vendorSpecific: semanticClassification.confidence > 80,
+      equipmentSpecific: semanticMetadata.equipmentStrategy !== null,
+      deviceContext: semanticMetadata.deviceContext,
+      reasoning: semanticClassification.reasoning
+    };
+    
+    console.log(`Point "${point.dis}" -> "${point.normalizedName}" (${point.normalizationConfidence}% confidence)`, {
+      semanticClassification: semanticClassification.pointType,
+      semanticConfidence: semanticClassification.confidence,
+      vendorSpecific: point.semanticMetadata.vendorSpecific,
+      reasoning: semanticClassification.reasoning.slice(0, 2) // Show first 2 reasoning items
+    });
+  });
+
+  // Calculate enhanced normalization summary
+  const normalizationStats = normalizationEngine.getNormalizationStats(normalizations);
+  const semanticStats = {
+    vendorSpecificPoints: points.filter(p => p.semanticMetadata?.vendorSpecific).length,
+    equipmentSpecificPoints: points.filter(p => p.semanticMetadata?.equipmentSpecific).length,
+    averageSemanticConfidence: points.reduce((sum, p) => sum + (p.normalizationConfidence || 0), 0) / points.length
+  };
+  
+  console.log(`Enhanced normalization summary for ${equipmentId}:`, {
+    ...normalizationStats,
+    ...semanticStats
+  });
+
   return {
     id: equipmentId,
     connectorId: connector.id,
@@ -308,6 +385,12 @@ export function parseTrioFile(
     connState: connector.connState,
     uri: connector.uri,
     additionalDescriptiveFields: connector.additionalDescriptiveFields,
+    // Add Haystack integration fields
+    normalizationSummary: {
+      totalPoints: normalizationStats.totalPoints,
+      normalizedPoints: normalizationStats.normalizedPoints,
+      averageConfidence: normalizationStats.averageConfidence
+    }
   };
 }
 
@@ -339,5 +422,472 @@ export function analyzeCsvStructure(csvContent: string): {
     descriptiveFields,
     unknownFields,
     sampleRow: parsed.data[0] || null
+  };
+}
+
+// Vendor-specific rule engines for enhanced normalization
+const VENDOR_SPECIFIC_RULES: Record<string, {
+  name: string;
+  patterns: Array<{
+    pattern: RegExp;
+    pointType: string;
+    confidence: number;
+    tags: string[];
+  }>;
+  modelSpecificRules?: Record<string, Array<{
+    pattern: RegExp;
+    pointType: string;
+    confidence: number;
+    tags: string[];
+  }>>;
+}> = {
+  'schneider electric': {
+    name: 'Schneider Electric',
+    patterns: [
+      {
+        pattern: /^(Sa|Supply).*(Tmp|Temp|Temperature)/i,
+        pointType: 'Supply Air Temperature',
+        confidence: 85,
+        tags: ['air', 'temp', 'supply', 'sensor']
+      },
+      {
+        pattern: /^(Ra|Return).*(Tmp|Temp|Temperature)/i,
+        pointType: 'Return Air Temperature',
+        confidence: 85,
+        tags: ['air', 'temp', 'return', 'sensor']
+      },
+      {
+        pattern: /^(Ma|Mixed).*(Tmp|Temp|Temperature)/i,
+        pointType: 'Mixed Air Temperature',
+        confidence: 85,
+        tags: ['air', 'temp', 'mixed', 'sensor']
+      },
+      {
+        pattern: /^(Oa|Outside).*(Tmp|Temp|Temperature)/i,
+        pointType: 'Outside Air Temperature',
+        confidence: 85,
+        tags: ['air', 'temp', 'outside', 'sensor']
+      },
+      {
+        pattern: /(Htg|Heat).*(Spt|Setpoint)/i,
+        pointType: 'Heating Setpoint',
+        confidence: 80,
+        tags: ['heating', 'setpoint', 'control']
+      },
+      {
+        pattern: /(Clg|Cool).*(Spt|Setpoint)/i,
+        pointType: 'Cooling Setpoint',
+        confidence: 80,
+        tags: ['cooling', 'setpoint', 'control']
+      },
+      {
+        pattern: /(Dmpr|Damper).*(Pos|Position)/i,
+        pointType: 'Damper Position',
+        confidence: 80,
+        tags: ['damper', 'position', 'actuator']
+      },
+      {
+        pattern: /(Fan|Spd|Speed)/i,
+        pointType: 'Fan Speed',
+        confidence: 75,
+        tags: ['fan', 'speed', 'control']
+      }
+    ],
+    modelSpecificRules: {
+      'MP-V-7A': [
+        {
+          pattern: /^Vav/i,
+          pointType: 'VAV Box Control',
+          confidence: 90,
+          tags: ['vav', 'control', 'terminal']
+        }
+      ],
+      'MP-C-36A': [
+        {
+          pattern: /^(Ahu|Rtu)/i,
+          pointType: 'Air Handler Control',
+          confidence: 90,
+          tags: ['ahu', 'control', 'central']
+        }
+      ],
+      'MP-C-24A': [
+        {
+          pattern: /^(Chw|Hhw)/i,
+          pointType: 'Plant System Control',
+          confidence: 90,
+          tags: ['plant', 'control', 'system']
+        }
+      ]
+    }
+  },
+  'abb, inc.': {
+    name: 'ABB',
+    patterns: [
+      {
+        pattern: /^(Motor|Pump).*(Spd|Speed)/i,
+        pointType: 'Motor Speed Control',
+        confidence: 85,
+        tags: ['motor', 'speed', 'vfd', 'control']
+      },
+      {
+        pattern: /^(Freq|Frequency)/i,
+        pointType: 'Frequency Control',
+        confidence: 80,
+        tags: ['frequency', 'vfd', 'control']
+      },
+      {
+        pattern: /^(Current|Amps)/i,
+        pointType: 'Motor Current',
+        confidence: 80,
+        tags: ['current', 'motor', 'sensor']
+      },
+      {
+        pattern: /^(Power|Watts)/i,
+        pointType: 'Power Consumption',
+        confidence: 80,
+        tags: ['power', 'energy', 'sensor']
+      }
+    ],
+    modelSpecificRules: {
+      'ABB ECLIPSE 80 ACH580': [
+        {
+          pattern: /^(Drive|Vfd)/i,
+          pointType: 'VFD Control',
+          confidence: 95,
+          tags: ['vfd', 'drive', 'control', 'motor']
+        }
+      ]
+    }
+  },
+  'daikin applied': {
+    name: 'Daikin Applied',
+    patterns: [
+      {
+        pattern: /^(Chiller|Chill)/i,
+        pointType: 'Chiller Control',
+        confidence: 90,
+        tags: ['chiller', 'cooling', 'plant']
+      },
+      {
+        pattern: /^(Evap|Evaporator)/i,
+        pointType: 'Evaporator Control',
+        confidence: 85,
+        tags: ['evaporator', 'cooling', 'heat-exchanger']
+      },
+      {
+        pattern: /^(Cond|Condenser)/i,
+        pointType: 'Condenser Control',
+        confidence: 85,
+        tags: ['condenser', 'cooling', 'heat-exchanger']
+      },
+      {
+        pattern: /^(Refrig|Refrigerant)/i,
+        pointType: 'Refrigerant Control',
+        confidence: 85,
+        tags: ['refrigerant', 'cooling', 'control']
+      }
+    ]
+  },
+  'aerco': {
+    name: 'AERCO',
+    patterns: [
+      {
+        pattern: /^(Boiler|Blr)/i,
+        pointType: 'Boiler Control',
+        confidence: 90,
+        tags: ['boiler', 'heating', 'plant']
+      },
+      {
+        pattern: /^(Gas|Fuel)/i,
+        pointType: 'Fuel Control',
+        confidence: 85,
+        tags: ['fuel', 'gas', 'control']
+      },
+      {
+        pattern: /^(Flue|Exhaust)/i,
+        pointType: 'Flue Gas Control',
+        confidence: 85,
+        tags: ['flue', 'exhaust', 'combustion']
+      }
+    ]
+  },
+  'setra': {
+    name: 'SETRA',
+    patterns: [
+      {
+        pattern: /^(Press|Pressure)/i,
+        pointType: 'Pressure Sensor',
+        confidence: 90,
+        tags: ['pressure', 'sensor', 'monitoring']
+      },
+      {
+        pattern: /^(Diff|Differential)/i,
+        pointType: 'Differential Pressure',
+        confidence: 90,
+        tags: ['pressure', 'differential', 'sensor']
+      },
+      {
+        pattern: /^(Room|Zone)/i,
+        pointType: 'Room Monitoring',
+        confidence: 85,
+        tags: ['room', 'zone', 'monitoring']
+      }
+    ]
+  }
+};
+
+// Equipment type-specific normalization strategies
+const EQUIPMENT_TYPE_STRATEGIES: Record<string, {
+  contextPrefix: string;
+  commonPatterns: Array<{
+    pattern: RegExp;
+    pointType: string;
+    confidence: number;
+    tags: string[];
+  }>;
+}> = {
+  'VAV': {
+    contextPrefix: 'Terminal',
+    commonPatterns: [
+      {
+        pattern: /^(Rmtmp|Room.*Temp)/i,
+        pointType: 'Room Temperature',
+        confidence: 85,
+        tags: ['room', 'temp', 'sensor', 'zone']
+      },
+      {
+        pattern: /^(Airflow|Flow)/i,
+        pointType: 'Airflow Control',
+        confidence: 80,
+        tags: ['airflow', 'control', 'terminal']
+      },
+      {
+        pattern: /^(Occ|Occupancy)/i,
+        pointType: 'Occupancy Status',
+        confidence: 80,
+        tags: ['occupancy', 'sensor', 'zone']
+      }
+    ]
+  },
+  'AHU': {
+    contextPrefix: 'Central Air Handler',
+    commonPatterns: [
+      {
+        pattern: /^(Filter|Flt)/i,
+        pointType: 'Filter Status',
+        confidence: 80,
+        tags: ['filter', 'maintenance', 'air-quality']
+      },
+      {
+        pattern: /^(Coil|Htg|Clg)/i,
+        pointType: 'Coil Control',
+        confidence: 80,
+        tags: ['coil', 'control', 'heating-cooling']
+      },
+      {
+        pattern: /^(Economizer|Econ)/i,
+        pointType: 'Economizer Control',
+        confidence: 85,
+        tags: ['economizer', 'control', 'energy-saving']
+      }
+    ]
+  },
+  'Chiller': {
+    contextPrefix: 'Chiller Plant',
+    commonPatterns: [
+      {
+        pattern: /^(Capacity|Cap)/i,
+        pointType: 'Cooling Capacity',
+        confidence: 85,
+        tags: ['capacity', 'cooling', 'performance']
+      },
+      {
+        pattern: /^(Efficiency|Eff|Kw\/Ton)/i,
+        pointType: 'Energy Efficiency',
+        confidence: 85,
+        tags: ['efficiency', 'energy', 'performance']
+      }
+    ]
+  },
+  'Boiler': {
+    contextPrefix: 'Boiler Plant',
+    commonPatterns: [
+      {
+        pattern: /^(Firing|Fire)/i,
+        pointType: 'Firing Rate',
+        confidence: 85,
+        tags: ['firing', 'combustion', 'control']
+      },
+      {
+        pattern: /^(Stack|Flue)/i,
+        pointType: 'Stack Control',
+        confidence: 85,
+        tags: ['stack', 'flue', 'combustion']
+      }
+    ]
+  }
+};
+
+// Enhanced semantic metadata extraction
+interface SemanticMetadata {
+  vendorRules: typeof VENDOR_SPECIFIC_RULES[string] | null;
+  equipmentStrategy: typeof EQUIPMENT_TYPE_STRATEGIES[string] | null;
+  deviceContext: {
+    isVFD: boolean;
+    isController: boolean;
+    isMonitoring: boolean;
+    communicationProtocol: string;
+  };
+  confidenceModifiers: {
+    vendorMatch: number;
+    modelMatch: number;
+    deviceNameMatch: number;
+    contextMatch: number;
+  };
+}
+
+function extractSemanticMetadata(connector: Connector): SemanticMetadata {
+  const vendorKey = connector.vendorName?.toLowerCase().trim() || '';
+  const modelName = connector.modelName?.toLowerCase().trim() || '';
+  const deviceName = connector.bacnetDeviceName?.toLowerCase().trim() || '';
+  
+  // Extract vendor-specific rules
+  const vendorRules = VENDOR_SPECIFIC_RULES[vendorKey] || null;
+  
+  // Determine equipment type from connector dis
+  let equipmentStrategy = null;
+  const connectorDis = connector.dis.toLowerCase();
+  
+  if (connectorDis.includes('vav')) {
+    equipmentStrategy = EQUIPMENT_TYPE_STRATEGIES['VAV'];
+  } else if (connectorDis.includes('ahu') || connectorDis.includes('rtu')) {
+    equipmentStrategy = EQUIPMENT_TYPE_STRATEGIES['AHU'];
+  } else if (connectorDis.includes('chill')) {
+    equipmentStrategy = EQUIPMENT_TYPE_STRATEGIES['Chiller'];
+  } else if (connectorDis.includes('boiler') || connectorDis.includes('blr')) {
+    equipmentStrategy = EQUIPMENT_TYPE_STRATEGIES['Boiler'];
+  }
+  
+  // Analyze device context
+  const deviceContext = {
+    isVFD: modelName.includes('ach580') || modelName.includes('vfd') || modelName.includes('drive'),
+    isController: modelName.includes('mp-') || modelName.includes('controller') || modelName.includes('tb'),
+    isMonitoring: modelName.includes('apm') || modelName.includes('monitor') || vendorKey.includes('setra'),
+    communicationProtocol: connector.uri?.includes('bacnet') ? 'BACnet' : 'Unknown'
+  };
+  
+  // Calculate confidence modifiers
+  const confidenceModifiers = {
+    vendorMatch: vendorRules ? 15 : 0,
+    modelMatch: modelName ? 10 : 0,
+    deviceNameMatch: deviceName ? 8 : 0,
+    contextMatch: equipmentStrategy ? 12 : 0
+  };
+  
+  return {
+    vendorRules,
+    equipmentStrategy,
+    deviceContext,
+    confidenceModifiers
+  };
+}
+
+// Enhanced point classification with semantic metadata
+function classifyPointWithSemanticMetadata(
+  pointName: string,
+  connector: Connector,
+  semanticMetadata: SemanticMetadata
+): {
+  pointType: string;
+  confidence: number;
+  tags: string[];
+  reasoning: string[];
+} {
+  let bestMatch = {
+    pointType: 'Unknown',
+    confidence: 0,
+    tags: [] as string[],
+    reasoning: [] as string[]
+  };
+  
+  const reasoning: string[] = [];
+  
+  // Try vendor-specific rules first
+  if (semanticMetadata.vendorRules) {
+    const vendorRules = semanticMetadata.vendorRules;
+    reasoning.push(`Applying ${vendorRules.name} vendor rules`);
+    
+    // Check model-specific rules first
+    if (connector.modelName && vendorRules.modelSpecificRules) {
+      const modelRules = vendorRules.modelSpecificRules[connector.modelName];
+      if (modelRules) {
+        for (const rule of modelRules) {
+          if (rule.pattern.test(pointName)) {
+            if (rule.confidence > bestMatch.confidence) {
+              bestMatch = {
+                pointType: rule.pointType,
+                confidence: rule.confidence + semanticMetadata.confidenceModifiers.modelMatch,
+                tags: [...rule.tags],
+                reasoning: [...reasoning, `Model-specific rule: ${rule.pattern.source}`]
+              };
+            }
+          }
+        }
+      }
+    }
+    
+    // Check general vendor patterns
+    for (const rule of vendorRules.patterns) {
+      if (rule.pattern.test(pointName)) {
+        const adjustedConfidence = rule.confidence + semanticMetadata.confidenceModifiers.vendorMatch;
+        if (adjustedConfidence > bestMatch.confidence) {
+          bestMatch = {
+            pointType: rule.pointType,
+            confidence: adjustedConfidence,
+            tags: [...rule.tags],
+            reasoning: [...reasoning, `Vendor pattern: ${rule.pattern.source}`]
+          };
+        }
+      }
+    }
+  }
+  
+  // Try equipment-specific strategies
+  if (semanticMetadata.equipmentStrategy) {
+    const strategy = semanticMetadata.equipmentStrategy;
+    reasoning.push(`Applying ${strategy.contextPrefix} equipment strategy`);
+    
+    for (const pattern of strategy.commonPatterns) {
+      if (pattern.pattern.test(pointName)) {
+        const adjustedConfidence = pattern.confidence + semanticMetadata.confidenceModifiers.contextMatch;
+        if (adjustedConfidence > bestMatch.confidence) {
+          bestMatch = {
+            pointType: pattern.pointType,
+            confidence: adjustedConfidence,
+            tags: [...pattern.tags, 'equipment-specific'],
+            reasoning: [...reasoning, `Equipment pattern: ${pattern.pattern.source}`]
+          };
+        }
+      }
+    }
+  }
+  
+  // Add device context tags
+  if (semanticMetadata.deviceContext.isVFD) {
+    bestMatch.tags.push('vfd');
+    reasoning.push('Device identified as VFD');
+  }
+  if (semanticMetadata.deviceContext.isController) {
+    bestMatch.tags.push('controller');
+    reasoning.push('Device identified as controller');
+  }
+  if (semanticMetadata.deviceContext.isMonitoring) {
+    bestMatch.tags.push('monitoring');
+    reasoning.push('Device identified as monitoring system');
+  }
+  
+  return {
+    ...bestMatch,
+    reasoning
   };
 }

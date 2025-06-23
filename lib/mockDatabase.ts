@@ -3,6 +3,8 @@ import {
     EquipmentSource,
     CxAlloyEquipment,
     EquipmentMapping,
+    AutoAssignmentResult,
+    SignatureAnalytics,
   } from '@/interfaces/bacnet';
   import { v4 as uuidv4 } from 'uuid';
   
@@ -11,6 +13,8 @@ import {
     equipment: Map<string, EquipmentSource>;
     unmappedCxAlloy: Map<string, CxAlloyEquipment>;
     mappings: Map<string, EquipmentMapping>;
+    autoAssignments: Map<string, AutoAssignmentResult>;
+    signatureAnalytics: Map<string, SignatureAnalytics>;
     isInitialized: boolean;
   }
   
@@ -19,6 +23,8 @@ import {
     equipment: new Map(),
     unmappedCxAlloy: new Map(),
     mappings: new Map(),
+    autoAssignments: new Map(),
+    signatureAnalytics: new Map(),
     isInitialized: false,
   };
   
@@ -34,6 +40,8 @@ import {
       db.equipment.clear();
       db.unmappedCxAlloy.clear();
       db.mappings.clear();
+      db.autoAssignments.clear();
+      db.signatureAnalytics.clear();
   
       signatures.forEach((s) => db.signatures.set(s.id, s));
       equipment.forEach((e) => db.equipment.set(e.id, e));
@@ -49,6 +57,8 @@ import {
         db.equipment.clear();
         db.unmappedCxAlloy.clear();
         db.mappings.clear();
+        db.autoAssignments.clear();
+        db.signatureAnalytics.clear();
         console.log('In-memory database has been reset.');
     },
   
@@ -114,6 +124,64 @@ import {
       const updatedSignature = { ...signature, ...updates, source: 'user-validated' as const };
       db.signatures.set(id, updatedSignature);
       return updatedSignature;
+    },
+
+    // Auto-assignment and confidence tracking methods
+    createAutoAssignment: (assignment: Omit<AutoAssignmentResult, 'timestamp'>) => {
+      const newAssignment: AutoAssignmentResult = {
+        ...assignment,
+        timestamp: new Date()
+      };
+      
+      const id = `${assignment.equipmentId}-${assignment.signatureId}`;
+      db.autoAssignments.set(id, newAssignment);
+      return newAssignment;
+    },
+
+    getAutoAssignments: () => Array.from(db.autoAssignments.values()),
+
+    updateAutoAssignment: (equipmentId: string, signatureId: string, updates: Partial<AutoAssignmentResult>) => {
+      const id = `${equipmentId}-${signatureId}`;
+      const assignment = db.autoAssignments.get(id);
+      if (!assignment) throw new Error("Auto-assignment not found");
+
+      const updatedAssignment = { ...assignment, ...updates };
+      db.autoAssignments.set(id, updatedAssignment);
+      return updatedAssignment;
+    },
+
+    recordSignatureAnalytics: (analytics: SignatureAnalytics) => {
+      db.signatureAnalytics.set(analytics.signatureId, analytics);
+    },
+
+    getSignatureAnalytics: (signatureId: string) => {
+      return db.signatureAnalytics.get(signatureId);
+    },
+
+    getAllSignatureAnalytics: () => Array.from(db.signatureAnalytics.values()),
+
+    updateSignatureAnalytics: (signatureId: string, updates: Partial<SignatureAnalytics>) => {
+      const existing = db.signatureAnalytics.get(signatureId);
+      if (!existing) {
+        // Create new analytics if none exist
+        const newAnalytics: SignatureAnalytics = {
+          signatureId,
+          totalMatches: 0,
+          accurateMatches: 0,
+          accuracy: 0,
+          averageConfidence: 0,
+          usageFrequency: 0,
+          lastUsed: new Date(),
+          userFeedback: { positive: 0, negative: 0 },
+          ...updates
+        };
+        db.signatureAnalytics.set(signatureId, newAnalytics);
+        return newAnalytics;
+      }
+
+      const updatedAnalytics = { ...existing, ...updates };
+      db.signatureAnalytics.set(signatureId, updatedAnalytics);
+      return updatedAnalytics;
     }
   };
   
