@@ -1,26 +1,51 @@
-@import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #f0f2f5;
+  color: #1a202c;
+}
+
+.panel {
+  @apply bg-white rounded-lg shadow-md p-4 flex flex-col;
+  height: calc(100vh - 8rem); /* Full height minus header and padding */
+}
+
+/* Additional padding for side panels */
+.panel:first-child,
+.panel:last-child {
+  @apply px-6;
+}
+
+.panel-title {
+  @apply text-lg font-bold border-b pb-2 mb-4 text-gray-700;
+}
+
+.panel-content {
+  @apply overflow-y-auto flex-grow;
+}
+
+.item-card {
+  @apply p-3 border rounded-md mb-2 cursor-pointer transition-all duration-150;
+}
+
+.item-card:hover {
+  @apply bg-blue-50 border-blue-300;
+}
+
+.item-card.selected {
+  @apply bg-blue-100 border-blue-500 shadow-sm;
+}
+
+.item-card.disabled {
+    @apply cursor-not-allowed bg-gray-100 text-gray-400 opacity-60;
+}
+
+.item-card-title {
+  @apply font-semibold text-gray-800;
+}
+
+.item-card-subtitle {
+  @apply text-sm text-gray-500;
 }
