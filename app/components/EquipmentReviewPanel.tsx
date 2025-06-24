@@ -481,12 +481,15 @@ export function EquipmentReviewPanel() {
       <div className="panel-title flex justify-between items-center">
         <span>Equipment Review</span>
         {equipment && (
-          <button 
-            onClick={openEditModal}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition flex-shrink-0"
-          >
-            Manage Tracked Points
-          </button>
+          <div className="flex-shrink-0">
+            <button 
+              onClick={openEditModal}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded text-sm transition-colors duration-200"
+              style={{ minWidth: '160px' }}
+            >
+              Manage Tracked Points
+            </button>
+          </div>
         )}
       </div>
       
@@ -513,51 +516,113 @@ export function EquipmentReviewPanel() {
           <div className="h-full flex flex-col">
             {/* Condensed Top Section - Equipment Header and Template Controls */}
             <div className="flex-shrink-0 border-b border-gray-200">
-              {/* Equipment Header - More Compact */}
+                            {/* Equipment Header - Compact Layout */}
               <div className="bg-blue-50 p-3 border border-blue-200">
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-lg font-semibold text-blue-800 mb-1">{equipment.id}</h4>
-                  <div className="text-xs text-blue-600 space-y-0.5">
-                    <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-                      <span>Type: {equipment.equipmentType}</span>
-                      <span>Vendor: {equipment.vendorName || 'Unknown'}</span>
-                      <span>Model: {equipment.modelName || 'Unknown'}</span>
-                      {equipment.bacnetDeviceName && <span>Device: {equipment.bacnetDeviceName}</span>}
-                      {equipment.bacnetDeviceStatus && <span>Status: {equipment.bacnetDeviceStatus}</span>}
-                      {equipment.bacnetVersion && <span>Version: {equipment.bacnetVersion}</span>}
-                      {equipment.connState && <span>Connection: {equipment.connState}</span>}
-                      <span>Points: {equipment.points.length}</span>
+                <h4 className="text-lg font-bold text-blue-800 mb-3">{equipment.id}</h4>
+                
+                {/* Main Content Area - Device Info Left, Data Metrics Right */}
+                <div className="flex gap-6 mb-3">
+                  {/* Device Information Grid - Left Side */}
+                  <div className="flex-1">
+                    <h5 className="text-sm font-semibold text-gray-800 mb-2">Device Information</h5>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                      <div className="flex">
+                        <span className="text-gray-600 mr-2">Type:</span>
+                        <span className="font-medium text-gray-800">{equipment.equipmentType}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="text-gray-600 mr-2">Vendor:</span>
+                        <span className="font-medium text-gray-800">{equipment.vendorName || 'Unknown'}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="text-gray-600 mr-2">Model:</span>
+                        <span className="font-medium text-gray-800">{equipment.modelName || 'Unknown'}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="text-gray-600 mr-2">Device:</span>
+                        <span className="font-medium text-gray-800">{equipment.bacnetDeviceName || 'N/A'}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="text-gray-600 mr-2">Status:</span>
+                        <span className="font-medium text-gray-800">{equipment.bacnetDeviceStatus || 'Unknown'}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="text-gray-600 mr-2">Version:</span>
+                        <span className="font-medium text-gray-800">{equipment.bacnetVersion || 'N/A'}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="text-gray-600 mr-2">Connection:</span>
+                        <span className="font-medium text-gray-800">{equipment.connState || 'Unknown'}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="text-gray-600 mr-2">Points:</span>
+                        <span className="font-medium text-gray-800">{equipment.points.length}</span>
+                      </div>
                     </div>
-                    
-                    {/* Compact Normalization Summary */}
-                    {normalizationStats && (
-                      <div className="mt-1 p-2 bg-blue-100 rounded text-xs">
-                        <span className="font-medium text-blue-700">Normalization:</span>
-                        <span className="text-blue-600 ml-1">
-                          {normalizationStats.normalizedPoints}/{normalizationStats.totalPoints} ({normalizationStats.normalizationRate}%) • 
-                          Avg Confidence: {normalizationStats.averageConfidence}%
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Compact Additional Info */}
-                    {equipment.fullDescription && (
-                      <div className="mt-1 p-1 bg-blue-100 rounded text-xs">
-                        <span className="font-medium text-blue-700">Description:</span>
-                        <span className="text-blue-600 ml-1 truncate">{equipment.fullDescription}</span>
-                      </div>
-                    )}
                   </div>
+                  
+                  {/* Data Metrics - Right Side */}
+                  {normalizationStats && (
+                    <div className="w-80">
+                      <h5 className="text-sm font-semibold text-gray-800 mb-2">Data Metrics</h5>
+                      <div className="space-y-2">
+                        {/* Normalization Progress */}
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs text-gray-700">Normalization</span>
+                            <span className="text-xs font-semibold text-gray-800">
+                              {normalizationStats.normalizedPoints}/{normalizationStats.totalPoints} ({normalizationStats.normalizationRate}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
+                              style={{ width: `${normalizationStats.normalizationRate}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        {/* Average Confidence Progress */}
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs text-gray-700">Avg Confidence</span>
+                            <span className="text-xs font-semibold text-blue-600">{normalizationStats.averageConfidence}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className={`h-1.5 rounded-full transition-all duration-300 ${
+                                normalizationStats.averageConfidence >= 80 ? 'bg-green-500' :
+                                normalizationStats.averageConfidence >= 60 ? 'bg-yellow-500' :
+                                normalizationStats.averageConfidence >= 40 ? 'bg-orange-500' :
+                                'bg-red-500'
+                              }`}
+                              style={{ width: `${normalizationStats.averageConfidence}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+                
+                {/* Description - Full Width Below */}
+                {equipment.fullDescription && (
+                  <div className="p-2 bg-blue-100 border border-blue-200 rounded">
+                    <div className="text-xs">
+                      <span className="font-semibold text-blue-800">Description: </span>
+                      <span className="text-blue-700">{equipment.fullDescription}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Compact Template Status and Controls */}
-              <div className="p-3 space-y-2">
+              <div className="p-2 space-y-1.5">
                 {/* Template Status Indicator */}
                 {appliedSignature && (
-                  <div className="bg-green-50 px-3 py-2 rounded border border-green-200">
-                    <div className="flex items-center text-sm">
-                      <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                  <div className="bg-green-50 px-2 py-1.5 rounded border border-green-200">
+                    <div className="flex items-center text-xs">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
                       <span className="font-medium text-green-800">Template: </span>
                       <span className="text-green-700 ml-1">{appliedSignature.name}</span>
                       <span className="text-green-600 ml-2 text-xs">
@@ -568,15 +633,15 @@ export function EquipmentReviewPanel() {
                 )}
 
                 {/* Compact Apply Template Section */}
-                <div className="bg-gray-50 px-3 py-2 rounded border">
+                <div className="bg-gray-50 px-2 py-1.5 rounded border">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700 flex-shrink-0">
+                    <label className="text-xs font-medium text-gray-700 flex-shrink-0">
                       {appliedSignature ? 'Change:' : 'Apply:'}
                     </label>
                     <select
                       value={selectedSignatureId}
                       onChange={(e) => setSelectedSignatureId(e.target.value)}
-                      className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="">No template</option>
                       {compatibleSignatures.map((signature) => (
@@ -588,12 +653,12 @@ export function EquipmentReviewPanel() {
                     <button
                       onClick={handleApplySignature}
                       disabled={appliedSignature?.id === selectedSignatureId}
-                      className="px-3 py-1 bg-green-500 text-white rounded text-xs disabled:bg-gray-300 hover:bg-green-600 transition flex-shrink-0"
+                      className="px-2 py-1 bg-green-500 text-white rounded text-xs disabled:bg-gray-300 hover:bg-green-600 transition flex-shrink-0"
                     >
                       {selectedSignatureId === '' ? 'Remove' : 'Apply'}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Select and apply a signature template that matches this equipment type.
                   </p>
                 </div>

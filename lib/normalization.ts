@@ -6,7 +6,19 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
      // Temperature related
    'Tmp': 'Temperature',
    'Temp': 'Temperature',
-  'Sat': 'Saturation',
+   'Oat': 'Outside Air Temperature',
+   'oat': 'Outside Air Temperature',
+   'Rat': 'Return Air Temperature',
+   'rat': 'Return Air Temperature',
+   'Sat': 'Supply Air Temperature',
+   'sat': 'Supply Air Temperature',
+   'Mat': 'Mixed Air Temperature',
+   'mat': 'Mixed Air Temperature',
+   'Zat': 'Zone Air Temperature',
+   'zat': 'Zone Air Temperature',
+   'Znt': 'Zone Temperature',
+   'znt': 'Zone Temperature',
+  'Saturation': 'Saturation',
   'Suct': 'Suction',
   'Disch': 'Discharge',
   'Ent': 'Entering',
@@ -16,13 +28,22 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   
   // Air handling
   'Sa': 'Supply Air',
+  'Su': 'Supply',
+  'Sply': 'Supply',
   'Ra': 'Return Air',
   'Ma': 'Mixed Air',
   'Oa': 'Outside Air',
+  'Osa': 'Outside Air',
+  'osa': 'Outside Air',
   'Ea': 'Exhaust Air',
+  'Ex': 'Exhaust',
+  'Air': 'Air',
+  'Vol': 'Volume',
   'Fl': 'Flow',
   'Flow': 'Flow',
   'Spd': 'Speed',
+  'Vel': 'Velocity',
+  'Velocity': 'Velocity',
   'Fan': 'Fan',
   'Dpr': 'Damper',
   'Dmp': 'Damper',
@@ -43,15 +64,22 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   'Press': 'Pressure',
   'StPr': 'Static Pressure',
   'DiffPr': 'Differential Pressure',
+  'Diff': 'Differential',
+  'P': 'Pressure',
   'Cfm': 'CFM',
   'Gpm': 'GPM',
   
      // Control and status
    'Spt': 'Setpoint',
    'Sp': 'Setpoint',
+   'Stpt': 'Setpoint',
+   'SetPt': 'Setpoint',
+   'SetPoint': 'Setpoint',
    'Fb': 'Feedback',
-   'Sts': 'Status',
-   'Stat': 'Status',
+     'Sts': 'Status',
+  'Stat': 'Status',
+  'Req': 'Request',
+  'Trck': 'Track',
   'Alm': 'Alarm',
   'Alarm': 'Alarm',
   'Cmd': 'Command',
@@ -60,6 +88,7 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   'Occ': 'Occupied',
   'Unocc': 'Unoccupied',
   'Ovr': 'Override',
+  'Ovrd': 'Override',
   'Rem': 'Remote',
   'Lt': 'Light',
   'Lmt': 'Limit',
@@ -69,7 +98,7 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   
   // Equipment types
   'Ahu': 'Air Handling Unit',
-  'Vav': 'Variable Air Volume',
+  'Vav': 'VAV',
   'Fcu': 'Fan Coil Unit',
   'Rtu': 'Rooftop Unit',
   'Cuh': 'Cabinet Unit Heater',
@@ -81,7 +110,13 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   
   // Coils and components
   'Clg': 'Cooling',
+  'clg': 'Cooling',
+  'Cl': 'Cooling',
+  'cl': 'Cooling',
   'Htg': 'Heating',
+  'htg': 'Heating',
+  'Ht': 'Heating',
+  'ht': 'Heating',
   'Pht': 'Preheat',
   'Reheat': 'Reheat',
   'Coil': 'Coil',
@@ -96,6 +131,10 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   
      // Units and measurements
    'CO2': 'Carbon Dioxide',
+   'Co2': 'Carbon Dioxide',
+   'co2': 'Carbon Dioxide',
+   'Co': 'Carbon Dioxide',
+   'co': 'Carbon Dioxide',
    'Rh': 'Relative Humidity',
    'Psi': 'PSI',
   'InH2O': 'Inches Water Column',
@@ -116,10 +155,14 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
      // Time and scheduling
    'Act': 'Active',
    'Eff': 'Effective',
+   'Ef': 'Effective',
+   'Eval': 'Evaluation',
   'Dly': 'Delay',
   'Delay': 'Delay',
   'Time': 'Time',
   'Timer': 'Timer',
+  'Adj': 'Adjustment',
+  'Dpsp': 'Duct Static Pressure Setpoint',
   
   // Safety and protection
   'Frost': 'Frost',
@@ -134,6 +177,7 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   
   // Economizer and energy
   'Econ': 'Economizer',
+  'Eco': 'Economy',
   'Tr': 'Trigger',
   'Trig': 'Trigger',
   'Ig': 'Ignore',
@@ -143,11 +187,41 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   'Pwr': 'Power',
   'Power': 'Power',
   
+  // Control and Equipment
+  'Vfd': 'Variable Frequency Drive',
+  'VFD': 'Variable Frequency Drive',
+  'Dcv': 'Demand Control Ventilation',
+  'dcv': 'Demand Control Ventilation',
+  'DCV': 'Demand Control Ventilation',
+  'Ao': 'Analog Output',
+  'ao': 'Analog Output',
+  'AO': 'Analog Output',
+  'Ai': 'Analog Input',
+  'ai': 'Analog Input',
+  'AI': 'Analog Input',
+  'Bo': 'Binary Output',
+  'BO': 'Binary Output',
+  'Bi': 'Binary Input',
+  'BI': 'Binary Input',
+  'Do': 'Digital Output',
+  'DO': 'Digital Output',
+  'Di': 'Digital Input',
+  'DI': 'Digital Input',
+  'Rf': 'Return Fan',
+  'rf': 'Return Fan',
+  'RF': 'Return Fan',
+  'Sf': 'Supply Fan',
+  'SF': 'Supply Fan',
+  'Exf': 'Exhaust Fan',
+  'EXF': 'Exhaust Fan',
+  
   // Miscellaneous - Enhanced for CamelCase edge cases
   'Outdoor': 'Outdoor',
   'Indoor': 'Indoor',
   'Room': 'Room',
   'Rm': 'Room',        // Recommendation #2: Handle "Rm" edge case
+  'Cmf': 'Comfort',
+  'Tot': 'Total',
   'Zone': 'Zone',
   'Zn': 'Zone',        // Additional zone abbreviation
   'Space': 'Space',
@@ -158,13 +232,14 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   'Apt': 'Apartment',  // Additional room types
   'Flr': 'Floor',
   'Bldg': 'Building',
-  'Lvl': 'Level'
+  'Lvl': 'Level',
+  'Coef': 'Coefficient'
 };
 
 // Equipment type patterns for context-aware normalization
 const EQUIPMENT_TYPE_PATTERNS: Record<string, string[]> = {
   'AHU': ['Air Handling Unit', 'ahu', 'air handler', 'air handling'],
-  'VAV': ['VAV Box', 'Variable Air Volume', 'vav'],
+      'VAV': ['VAV Box', 'VAV', 'vav'],
   'RTU': ['Rooftop Unit', 'rtu', 'rooftop'],
   'FCU': ['Fan Coil Unit', 'fcu', 'fan coil'],
   'CUH': ['Cabinet Unit Heater', 'cuh', 'cabinet heater'],
@@ -324,7 +399,7 @@ const VENDOR_SPECIFIC_MAPPINGS: Record<string, Record<string, string>> = {
     'ADVT': 'Advanced Variable Volume Terminal',
     'MLD': 'Multi-Location Damper',
     'RIU': 'Remote Interface Unit',
-    'VAV': 'Variable Air Volume Box'
+    'VAV': 'VAV Box'
   }
 };
 
@@ -412,6 +487,9 @@ export class BACnetNormalizationEngine {
     this.debouncedClearCache = PerformanceUtils.debounce(() => {
       this.clearCache();
     }, 5000);
+    
+    // Clear cache to ensure new abbreviation logic takes effect
+    this.clearCache();
   }
 
   private initializeDefaultRules(): void {
@@ -466,7 +544,7 @@ export class BACnetNormalizationEngine {
        .replace(/([a-zA-Z])(\d)/g, '$1 $2') // Split letters from numbers
        .replace(/(\d)([a-zA-Z])/g, '$1 $2') // Split numbers from letters
        .split(/[\s_-]+/) // Split on whitespace, underscores, hyphens
-       .filter(part => part.length > 0 && part.length > 1); // Filter out single characters and empty parts
+       .filter(part => part.length > 0); // Only filter out empty parts, keep single characters
    }
 
   /**
@@ -667,12 +745,16 @@ export class BACnetNormalizationEngine {
        for (const [abbrev, fullForm] of Object.entries(BACNET_ABBREVIATIONS)) {
          // Case-insensitive word boundary replacement
          const regex = new RegExp(`\\b${abbrev}\\b`, 'gi');
-         if (regex.test(normalizedName) && !normalizedName.toLowerCase().includes(fullForm.toLowerCase())) {
-           normalizedName = normalizedName.replace(regex, fullForm);
-           confidence += 5;
-           
-           const tags = this.getTagsForTerm(fullForm.toLowerCase());
-           tags.forEach(tag => appliedTags.add(tag));
+         if (regex.test(normalizedName)) {
+           // Only skip replacement if the exact full form already exists as a separate word
+           const fullFormRegex = new RegExp(`\\b${fullForm}\\b`, 'i');
+           if (!fullFormRegex.test(normalizedName)) {
+             normalizedName = normalizedName.replace(regex, fullForm);
+             confidence += 5;
+             
+             const tags = this.getTagsForTerm(fullForm.toLowerCase());
+             tags.forEach(tag => appliedTags.add(tag));
+           }
          }
        }
        passCount++;
@@ -728,13 +810,13 @@ export class BACnetNormalizationEngine {
     const type = equipmentType.toUpperCase();
     switch (type) {
       case 'AHU':
-        return 'Air Handling Unit';
+        return 'AHU';
       case 'VAV':
-        return 'Variable Air Volume';
+        return 'VAV';
       case 'RTU':
-        return 'Rooftop Unit';
+        return 'RTU';
       case 'FCU':
-        return 'Fan Coil Unit';
+        return 'FCU';
       case 'CHILLER':
         return 'Chiller';
       case 'BOILER':
@@ -747,12 +829,23 @@ export class BACnetNormalizationEngine {
   }
 
   private formatNormalizedName(name: string): string {
+    // Equipment type abbreviations that should stay in all caps
+    const equipmentAbbreviations = ['VAV', 'AHU', 'RTU', 'FCU', 'VFD', 'UPS', 'PDU', 'RTU', 'BAS', 'DDC', 'PLC'];
+    
     // Remove extra spaces and format properly
     return name
       .replace(/\s+/g, ' ')
       .trim()
       .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map(word => {
+        const upperWord = word.toUpperCase();
+        // Keep equipment abbreviations in all caps
+        if (equipmentAbbreviations.includes(upperWord)) {
+          return upperWord;
+        }
+        // Standard title case for other words
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
       .join(' ');
   }
 
@@ -908,6 +1001,8 @@ export class BACnetNormalizationEngine {
    */
   public clearCache(): void {
     this.normalizationCache.clear();
+    NormalizationCache.clear();
+    console.log('🗑️ Normalization cache cleared - new abbreviations will take effect');
   }
 
   /**

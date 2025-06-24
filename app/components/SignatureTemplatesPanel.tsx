@@ -79,10 +79,13 @@ const SignatureFilters: React.FC<SignatureFiltersProps> = ({
   availableTypes,
 }) => {
   return (
-    <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
+    <div className="space-y-6 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 backdrop-blur-sm">
       {/* Search */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="form-label">
+          <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
           Search Signatures
         </label>
         <input
@@ -90,7 +93,7 @@ const SignatureFilters: React.FC<SignatureFiltersProps> = ({
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search by name, equipment type, or points..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="form-input"
         />
       </div>
 
@@ -98,13 +101,16 @@ const SignatureFilters: React.FC<SignatureFiltersProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Equipment Type Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="form-label">
+            <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 7h10M7 11h4m6 0h2m-4 4h2m-6 0h4" />
+            </svg>
             Equipment Type
           </label>
           <select
             value={equipmentTypeFilter}
             onChange={(e) => onEquipmentTypeChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="form-select"
           >
             <option value="">All Types</option>
             {availableTypes.map(type => (
@@ -115,13 +121,16 @@ const SignatureFilters: React.FC<SignatureFiltersProps> = ({
 
         {/* Source Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="form-label">
+            <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
             Source
           </label>
           <select
             value={sourceFilter}
             onChange={(e) => onSourceFilterChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="form-select"
           >
             <option value="">All Sources</option>
             <option value="auto-generated">Auto-Generated</option>
@@ -131,7 +140,10 @@ const SignatureFilters: React.FC<SignatureFiltersProps> = ({
 
         {/* Confidence Range */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="form-label">
+            <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
             Min Confidence: {confidenceRange[0]}%
           </label>
           <input
@@ -140,7 +152,10 @@ const SignatureFilters: React.FC<SignatureFiltersProps> = ({
             max="100"
             value={confidenceRange[0]}
             onChange={(e) => onConfidenceRangeChange([parseInt(e.target.value), confidenceRange[1]])}
-            className="w-full"
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            style={{
+              background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${confidenceRange[0]}%, #e5e7eb ${confidenceRange[0]}%, #e5e7eb 100%)`
+            }}
           />
         </div>
       </div>
@@ -170,39 +185,60 @@ const SignatureCard: React.FC<SignatureCardProps> = ({
 }) => {
   const getSourceBadge = (source: string) => {
     const badges = {
-      'auto-generated': 'bg-blue-100 text-blue-800',
-      'user-validated': 'bg-green-100 text-green-800',
+      'auto-generated': 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 border-blue-200',
+      'user-validated': 'bg-gradient-to-r from-green-50 to-green-100 text-green-800 border-green-200',
+      'user-created': 'bg-gradient-to-r from-purple-50 to-purple-100 text-purple-800 border-purple-200',
     };
-    return badges[source as keyof typeof badges] || 'bg-gray-100 text-gray-800';
+    return badges[source as keyof typeof badges] || 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-800 border-gray-200';
   };
 
   const getConfidenceBadge = (confidence: number) => {
-    if (confidence >= 90) return 'bg-green-100 text-green-800';
-    if (confidence >= 70) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
+    if (confidence >= 90) return 'bg-gradient-to-r from-green-50 to-green-100 text-green-800 border-green-200';
+    if (confidence >= 70) return 'bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-800 border-yellow-200';
+    return 'bg-gradient-to-r from-red-50 to-red-100 text-red-800 border-red-200';
   };
 
   return (
     <div
-      className={`p-4 border rounded-lg cursor-pointer transition-all ${
-        isSelected 
-          ? 'border-blue-500 bg-blue-50 shadow-md' 
-          : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-      }`}
+      className={`item-card group ${isSelected ? 'selected' : ''}`}
       onClick={onSelect}
     >
       {/* Header */}
-      <div className="flex justify-between items-start mb-3">
+      <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
-          <h4 className="font-semibold text-gray-900 mb-1">{signature.name}</h4>
-          <div className="flex items-center space-x-2 mb-2">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSourceBadge(signature.source)}`}>
-              {signature.source === 'auto-generated' ? 'Auto' : 'Validated'}
+          <h4 className="item-card-title flex items-center">
+            <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {signature.name}
+          </h4>
+          <div className="flex items-center space-x-3 mb-3">
+            <span className={`status-indicator border ${getSourceBadge(signature.source)}`}>
+              {signature.source === 'auto-generated' ? (
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              ) : signature.source === 'user-validated' ? (
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              )}
+              {signature.source === 'auto-generated' ? 'Auto' : signature.source === 'user-validated' ? 'Validated' : 'User-Created'}
             </span>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getConfidenceBadge(signature.confidence)}`}>
+            <span className={`status-indicator border ${getConfidenceBadge(signature.confidence)}`}>
+              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
               {signature.confidence}%
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="status-indicator bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 border border-gray-200">
+              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 7h10M7 11h4m6 0h2m-4 4h2m-6 0h4" />
+              </svg>
               {signature.equipmentType}
             </span>
           </div>
@@ -210,18 +246,23 @@ const SignatureCard: React.FC<SignatureCardProps> = ({
       </div>
 
       {/* Point Signature Preview */}
-      <div className="mb-3">
-        <div className="text-xs text-gray-600 mb-1">
-          Point Signature ({signature.pointSignature.length} points):
+      <div className="mapping-details">
+        <div className="flex items-center mb-2">
+          <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+          </svg>
+          <span className="mapping-details-label">
+            Point Signature ({signature.pointSignature.length} points)
+          </span>
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-2">
           {signature.pointSignature.slice(0, 5).map((point, idx) => (
-            <span key={idx} className="px-2 py-1 bg-gray-100 text-xs rounded">
+            <span key={idx} className="px-3 py-1 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 text-xs rounded-lg border border-blue-200 font-medium">
               {point.dis}
             </span>
           ))}
           {signature.pointSignature.length > 5 && (
-            <span className="px-2 py-1 bg-gray-100 text-xs rounded">
+            <span className="px-3 py-1 bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 text-xs rounded-lg border border-gray-200 font-medium">
               +{signature.pointSignature.length - 5} more
             </span>
           )}
@@ -230,55 +271,72 @@ const SignatureCard: React.FC<SignatureCardProps> = ({
 
       {/* Analytics */}
       {analytics && (
-        <div className="mb-3 p-2 bg-white rounded border">
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <span className="text-gray-600">Matches:</span>
-              <span className="ml-1 font-medium">{analytics.totalMatches}</span>
+        <div className="mapping-details mt-3">
+          <div className="flex items-center mb-2">
+            <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span className="mapping-details-label">Analytics</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="mapping-details-row">
+              <span className="mapping-details-label">Matches:</span>
+              <span className="mapping-details-value">{analytics.totalMatches}</span>
             </div>
-            <div>
-              <span className="text-gray-600">Accuracy:</span>
-              <span className="ml-1 font-medium">{Math.round(analytics.accuracy)}%</span>
+            <div className="mapping-details-row">
+              <span className="mapping-details-label">Accuracy:</span>
+              <span className="mapping-details-confidence">{Math.round(analytics.accuracy)}%</span>
             </div>
-            <div>
-              <span className="text-gray-600">Usage:</span>
-              <span className="ml-1 font-medium">{analytics.usageFrequency}</span>
+            <div className="mapping-details-row">
+              <span className="mapping-details-label">Usage:</span>
+              <span className="mapping-details-value">{analytics.usageFrequency}</span>
             </div>
-            <div>
-              <span className="text-gray-600">Feedback:</span>
-              <span className="ml-1 text-green-600">+{analytics.userFeedback.positive}</span>
-              <span className="ml-1 text-red-600">-{analytics.userFeedback.negative}</span>
+            <div className="mapping-details-row">
+              <span className="mapping-details-label">Feedback:</span>
+              <div className="flex space-x-2">
+                <span className="text-green-600 font-semibold">+{analytics.userFeedback.positive}</span>
+                <span className="text-red-600 font-semibold">-{analytics.userFeedback.negative}</span>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Actions */}
-      <div className="flex justify-between items-center">
-        <div className="text-xs text-gray-500">
+      <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-100">
+        <div className="flex items-center text-xs text-gray-500">
+          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
           {signature.matchingEquipmentIds.length} equipment matches
         </div>
-        <div className="flex space-x-1">
+        <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); onVerify(); }}
-            className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            className="action-button review"
             title="Verify signature"
           >
-            ✓
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+            className="action-button px-3 py-1.5 text-xs bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:from-gray-600 hover:to-gray-700 rounded-lg transition-all duration-200"
             title="Edit signature"
           >
-            ✏
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            className="action-button unmap"
             title="Delete signature"
           >
-            ×
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
           </button>
         </div>
       </div>
@@ -309,44 +367,58 @@ const BatchOperations: React.FC<BatchOperationsProps> = ({
   if (selectedSignatures.size === 0) return null;
 
   return (
-    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+    <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl backdrop-blur-sm animate-slide-in">
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-4">
-          <span className="text-sm font-medium text-blue-900">
-            {selectedSignatures.size} signature{selectedSignatures.size !== 1 ? 's' : ''} selected
-          </span>
-          <div className="flex space-x-2">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-semibold text-blue-900">
+              {selectedSignatures.size} signature{selectedSignatures.size !== 1 ? 's' : ''} selected
+            </span>
+          </div>
+          <div className="flex space-x-3">
             <button
               onClick={onSelectAll}
-              className="text-xs text-blue-600 hover:text-blue-800 underline"
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium underline transition-colors"
             >
               Select All ({totalSignatures})
             </button>
             <button
               onClick={onClearSelection}
-              className="text-xs text-blue-600 hover:text-blue-800 underline"
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium underline transition-colors"
             >
               Clear Selection
             </button>
           </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex space-x-3">
           <button
             onClick={onBatchVerify}
-            className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+            className="action-button map"
           >
+            <svg className="action-button-icon w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             Verify Selected
           </button>
           <button
             onClick={onBatchExport}
-            className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            className="action-button review"
           >
+            <svg className="action-button-icon w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
             Export Selected
           </button>
           <button
             onClick={onBatchDelete}
-            className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            className="action-button unmap"
           >
+            <svg className="action-button-icon w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
             Delete Selected
           </button>
         </div>
