@@ -891,3 +891,6 @@ function classifyPointWithSemanticMetadata(
     reasoning
   };
 }
+
+// Export functions for testing
+export { extractSemanticMetadata, classifyPointWithSemanticMetadata };

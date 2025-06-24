@@ -126,6 +126,26 @@ import {
       return updatedSignature;
     },
 
+    deleteSignature: (id: string) => {
+      const signature = db.signatures.get(id);
+      if (!signature) throw new Error("Signature not found");
+
+      // Remove the signature
+      db.signatures.delete(id);
+      
+      // Also remove any related analytics
+      db.signatureAnalytics.delete(id);
+      
+      // Remove any auto-assignments related to this signature
+      const assignmentsToRemove = Array.from(db.autoAssignments.entries())
+        .filter(([_, assignment]) => assignment.signatureId === id)
+        .map(([key]) => key);
+      
+      assignmentsToRemove.forEach(key => db.autoAssignments.delete(key));
+      
+      return true;
+    },
+
     // Auto-assignment and confidence tracking methods
     createAutoAssignment: (assignment: Omit<AutoAssignmentResult, 'timestamp'>) => {
       const newAssignment: AutoAssignmentResult = {

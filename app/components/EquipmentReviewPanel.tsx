@@ -478,8 +478,16 @@ export function EquipmentReviewPanel() {
 
   return (
     <div className="panel">
-      <div className="panel-title">
+      <div className="panel-title flex justify-between items-center">
         <span>Equipment Review</span>
+        {equipment && (
+          <button 
+            onClick={openEditModal}
+            className="px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition flex-shrink-0"
+          >
+            Manage Tracked Points
+          </button>
+        )}
       </div>
       
       <div className="panel-content">
@@ -507,47 +515,39 @@ export function EquipmentReviewPanel() {
             <div className="flex-shrink-0 border-b border-gray-200">
               {/* Equipment Header - More Compact */}
               <div className="bg-blue-50 p-3 border border-blue-200">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-lg font-semibold text-blue-800 mb-1">{equipment.id}</h4>
-                    <div className="text-xs text-blue-600 space-y-0.5">
-                      <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-                        <span>Type: {equipment.equipmentType}</span>
-                        <span>Vendor: {equipment.vendorName || 'Unknown'}</span>
-                        <span>Model: {equipment.modelName || 'Unknown'}</span>
-                        {equipment.bacnetDeviceName && <span>Device: {equipment.bacnetDeviceName}</span>}
-                        {equipment.bacnetDeviceStatus && <span>Status: {equipment.bacnetDeviceStatus}</span>}
-                        {equipment.bacnetVersion && <span>Version: {equipment.bacnetVersion}</span>}
-                        {equipment.connState && <span>Connection: {equipment.connState}</span>}
-                        <span>Points: {equipment.points.length}</span>
-                      </div>
-                      
-                      {/* Compact Normalization Summary */}
-                      {normalizationStats && (
-                        <div className="mt-1 p-2 bg-blue-100 rounded text-xs">
-                          <span className="font-medium text-blue-700">Normalization:</span>
-                          <span className="text-blue-600 ml-1">
-                            {normalizationStats.normalizedPoints}/{normalizationStats.totalPoints} ({normalizationStats.normalizationRate}%) • 
-                            Avg Confidence: {normalizationStats.averageConfidence}%
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* Compact Additional Info */}
-                      {equipment.fullDescription && (
-                        <div className="mt-1 p-1 bg-blue-100 rounded text-xs">
-                          <span className="font-medium text-blue-700">Description:</span>
-                          <span className="text-blue-600 ml-1 truncate">{equipment.fullDescription}</span>
-                        </div>
-                      )}
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-lg font-semibold text-blue-800 mb-1">{equipment.id}</h4>
+                  <div className="text-xs text-blue-600 space-y-0.5">
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+                      <span>Type: {equipment.equipmentType}</span>
+                      <span>Vendor: {equipment.vendorName || 'Unknown'}</span>
+                      <span>Model: {equipment.modelName || 'Unknown'}</span>
+                      {equipment.bacnetDeviceName && <span>Device: {equipment.bacnetDeviceName}</span>}
+                      {equipment.bacnetDeviceStatus && <span>Status: {equipment.bacnetDeviceStatus}</span>}
+                      {equipment.bacnetVersion && <span>Version: {equipment.bacnetVersion}</span>}
+                      {equipment.connState && <span>Connection: {equipment.connState}</span>}
+                      <span>Points: {equipment.points.length}</span>
                     </div>
+                    
+                    {/* Compact Normalization Summary */}
+                    {normalizationStats && (
+                      <div className="mt-1 p-2 bg-blue-100 rounded text-xs">
+                        <span className="font-medium text-blue-700">Normalization:</span>
+                        <span className="text-blue-600 ml-1">
+                          {normalizationStats.normalizedPoints}/{normalizationStats.totalPoints} ({normalizationStats.normalizationRate}%) • 
+                          Avg Confidence: {normalizationStats.averageConfidence}%
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Compact Additional Info */}
+                    {equipment.fullDescription && (
+                      <div className="mt-1 p-1 bg-blue-100 rounded text-xs">
+                        <span className="font-medium text-blue-700">Description:</span>
+                        <span className="text-blue-600 ml-1 truncate">{equipment.fullDescription}</span>
+                      </div>
+                    )}
                   </div>
-                  <button 
-                    onClick={openEditModal}
-                    className="px-3 py-1.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition flex-shrink-0 ml-3"
-                  >
-                    Manage Tracked Points
-                  </button>
                 </div>
               </div>
 

@@ -68,7 +68,7 @@ export interface BacnetPoint {
     name: string;
     equipmentType: string;
     pointSignature: Pick<BacnetPoint, 'dis' | 'kind' | 'unit'>[];
-    source: 'auto-generated' | 'user-validated';
+    source: 'auto-generated' | 'user-validated' | 'user-created';
     confidence: number;
     matchingEquipmentIds: string[];
     // Enhanced confidence and learning fields

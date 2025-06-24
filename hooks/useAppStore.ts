@@ -76,6 +76,8 @@ interface AppState {
   selectedSourceEquipmentId: string | null;
   selectedEquipmentId: string | null;
   isEditModalOpen: boolean;
+  isSignatureEditModalOpen: boolean;
+  editingSignatureId: string | null;
   expandedSignatureId: string | null;
   expandedEquipmentId: string | null;
   expandedEquipmentTypes: Set<string>;
@@ -115,6 +117,8 @@ interface AppState {
   setSelectedEquipmentId: (id: string | null) => void;
   openEditModal: () => void;
   closeEditModal: () => void;
+  openSignatureEditModal: (signatureId: string) => void;
+  closeSignatureEditModal: () => void;
   setExpandedSignatureId: (id: string | null) => void;
   setExpandedEquipmentId: (id: string | null) => void;
   toggleExpandedEquipmentType: (type: string) => void;
@@ -223,6 +227,8 @@ export const useAppStore = create<AppState>()(
       selectedSourceEquipmentId: null,
       selectedEquipmentId: null,
       isEditModalOpen: false,
+      isSignatureEditModalOpen: false,
+      editingSignatureId: null,
       expandedSignatureId: null,
       expandedEquipmentId: null,
       expandedEquipmentTypes: new Set<string>(),
@@ -265,6 +271,14 @@ export const useAppStore = create<AppState>()(
       setSelectedEquipmentId: (id) => set({ selectedEquipmentId: id }),
       openEditModal: () => set({ isEditModalOpen: true }),
       closeEditModal: () => set({ isEditModalOpen: false }),
+      openSignatureEditModal: (signatureId) => set({ 
+        isSignatureEditModalOpen: true, 
+        editingSignatureId: signatureId 
+      }),
+      closeSignatureEditModal: () => set({ 
+        isSignatureEditModalOpen: false, 
+        editingSignatureId: null 
+      }),
       setExpandedSignatureId: (id) => set({ expandedSignatureId: id }),
       setExpandedEquipmentId: (id) => set({ expandedEquipmentId: id }),
       toggleExpandedEquipmentType: (type) => set((state) => {

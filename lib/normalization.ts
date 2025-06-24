@@ -25,6 +25,8 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   'Spd': 'Speed',
   'Fan': 'Fan',
   'Dpr': 'Damper',
+  'Dmp': 'Damper',
+  'Dmpr': 'Damper',
   'Pos': 'Position',
   
   // Water systems
@@ -57,10 +59,17 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   'Enb': 'Enable',
   'Occ': 'Occupied',
   'Unocc': 'Unoccupied',
+  'Ovr': 'Override',
+  'Rem': 'Remote',
+  'Lt': 'Light',
+  'Lmt': 'Limit',
+  'Sen': 'Sensor',
+  'Ofs': 'Offset',
+  'Dmd': 'Demand',
   
   // Equipment types
   'Ahu': 'Air Handling Unit',
-  'Vav': 'VAV Box',
+  'Vav': 'Variable Air Volume',
   'Fcu': 'Fan Coil Unit',
   'Rtu': 'Rooftop Unit',
   'Cuh': 'Cabinet Unit Heater',
@@ -134,15 +143,22 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   'Pwr': 'Power',
   'Power': 'Power',
   
-  // Miscellaneous
+  // Miscellaneous - Enhanced for CamelCase edge cases
   'Outdoor': 'Outdoor',
   'Indoor': 'Indoor',
   'Room': 'Room',
+  'Rm': 'Room',        // Recommendation #2: Handle "Rm" edge case
   'Zone': 'Zone',
+  'Zn': 'Zone',        // Additional zone abbreviation
   'Space': 'Space',
+  'Spc': 'Space',      // Additional space abbreviation
   'Lab': 'Laboratory',
   'Office': 'Office',
-  'Lobby': 'Lobby'
+  'Lobby': 'Lobby',
+  'Apt': 'Apartment',  // Additional room types
+  'Flr': 'Floor',
+  'Bldg': 'Building',
+  'Lvl': 'Level'
 };
 
 // Equipment type patterns for context-aware normalization
@@ -160,23 +176,155 @@ const EQUIPMENT_TYPE_PATTERNS: Record<string, string[]> = {
   'LAB': ['Laboratory', 'lab', 'laboratory equipment']
 };
 
-// Vendor-specific abbreviation overrides
+// Enhanced vendor-specific abbreviation mappings - Recommendation #1
 const VENDOR_SPECIFIC_MAPPINGS: Record<string, Record<string, string>> = {
   'Schneider Electric': {
+    // Controller and device types
     'MP': 'Modular Processor',
     'SE': 'Schneider Electric',
-    'TB': 'Terminal Box'
+    'TB': 'Terminal Box',
+    'SBC': 'SmartX Building Controller',
+    'AC': 'Application Controller',
+    'IO': 'Input Output Module',
+    'TAC': 'Terminal Application Controller',
+    
+    // Schneider-specific point types
+    'EnaDly': 'Enable Delay',
+    'DisDly': 'Disable Delay',
+    'OffDly': 'Off Delay',
+    'OnDly': 'On Delay',
+    'SchdEna': 'Schedule Enable',
+    'ManOvr': 'Manual Override',
+    'LcLp': 'Local Loop',
+    'NetSt': 'Network Status',
+    'CommFlt': 'Communication Fault',
+    'OpHrs': 'Operating Hours',
+    'CycCnt': 'Cycle Count',
+    'FltSt': 'Fault Status',
+    
+    // Schneider energy and power
+    'KwHr': 'Kilowatt Hours',
+    'KwDmd': 'Kilowatt Demand',
+    'PF': 'Power Factor',
+    'VA': 'Volt Amperes',
+    'VAR': 'Volt Amperes Reactive'
   },
+  
+  'Johnson Controls': {
+    // Metasys specific abbreviations
+    'MS': 'Metasys',
+    'NAE': 'Network Automation Engine',
+    'NCE': 'Network Control Engine',
+    'SNE': 'System Network Engine',
+    'AD': 'Application Director',
+    'UI': 'User Interface',
+    
+    // Johnson Controls point types
+    'AdjSpt': 'Adjust Setpoint',
+    'EffSpt': 'Effective Setpoint',
+    'LocSpt': 'Local Setpoint',
+    'NetSpt': 'Network Setpoint',
+    'TotEff': 'Total Effective',
+    'HiLmt': 'High Limit',
+    'LoLmt': 'Low Limit',
+    'OperSt': 'Operational State',
+    'SysSt': 'System State',
+    'AlmSt': 'Alarm State'
+  },
+  
+  'Honeywell': {
+    // Honeywell WEBs systems
+    'WEB': 'WEBs System',
+    'XL': 'Excel Controller',
+    'WS': 'WEBs Supervisor',
+    'W7750': 'WEBs Controller',
+    'JACE': 'Java Application Control Engine',
+    
+    // Honeywell specific points
+    'DigOut': 'Digital Output',
+    'AnaOut': 'Analog Output',
+    'DigIn': 'Digital Input',
+    'AnaIn': 'Analog Input',
+    'TrendPt': 'Trend Point',
+    'SumPt': 'Summary Point',
+    'LogPt': 'Logic Point',
+    'CalcPt': 'Calculated Point'
+  },
+  
+  'Trane': {
+    // Tracer series
+    'TR': 'Tracer',
+    'TCS': 'Tracer Concierge',
+    'TCU': 'Terminal Control Unit',
+    'UCM': 'Unit Control Module',
+    'ZTU': 'Zone Terminal Unit',
+    
+    // Trane equipment specific
+    'RTAC': 'Rooftop Air Conditioner',
+    'CGAM': 'CenTravac Air Cooled Chiller',
+    'CGWM': 'CenTravac Water Cooled Chiller',
+    'RTHD': 'Rooftop Heat Pump',
+    'IntelliPak': 'IntelliPak Unit'
+  },
+  
+  'Siemens': {
+    // Building Technologies
+    'BT': 'Building Technologies',
+    'PXC': 'Programmable Controller',
+    'TRA': 'Terminal Room Automation',
+    'RXC': 'Room Controller',
+    'QMX': 'Universal Module',
+    
+    // Siemens communication
+    'BACnet': 'BACnet Protocol',
+    'LON': 'LonWorks Protocol',
+    'ModBus': 'Modbus Protocol',
+    'Insight': 'Insight Software',
+    'Navigator': 'Navigator System'
+  },
+  
   'ABB': {
+    // ABB drives and automation
     'Eclipse': 'Eclipse Drive',
-    'ACH': 'AC Drive'
+    'ACH': 'AC Drive',
+    'DCS': 'Distributed Control System',
+    'PLC': 'Programmable Logic Controller',
+    'HMI': 'Human Machine Interface',
+    'SCADA': 'Supervisory Control And Data Acquisition'
   },
+  
   'Daikin Applied': {
+    // Daikin equipment
     'AGZ': 'Air-Cooled Chiller',
-    'POL': 'Polar Control'
+    'WGZ': 'Water-Cooled Chiller',
+    'POL': 'Polar Control',
+    'Magnitude': 'Magnitude Chiller',
+    'Pathfinder': 'Pathfinder Controls'
   },
+  
+  'Carrier': {
+    // Carrier equipment and controls
+    'CCN': 'Carrier Comfort Network',
+    'i-Vu': 'i-Vu Building Automation',
+    'ComfortLink': 'ComfortLink System',
+    'AquaForce': 'AquaForce Chiller',
+    'WeatherExpert': 'WeatherExpert RTU'
+  },
+  
   'AERCO': {
-    'G': 'Gas Boiler'
+    // AERCO boiler systems
+    'BMK': 'Boiler Management Kit',
+    'BMS': 'Boiler Management System',
+    'Innovation': 'Innovation Boiler',
+    'Benchmark': 'Benchmark Boiler'
+  },
+  
+  'Titus': {
+    // Titus VAV and terminals
+    'ADVT': 'Advanced Variable Volume Terminal',
+    'MLD': 'Multi-Location Damper',
+    'RIU': 'Remote Interface Unit',
+    'VAV': 'Variable Air Volume Box'
   }
 };
 
@@ -295,14 +443,30 @@ export class BACnetNormalizationEngine {
    }
 
    private splitCamelCase(text: string): string[] {
+     // Recommendation #2: Enhanced CamelCase splitting to handle edge cases like "Rm" → "Room"
+     
+     // Pre-process common edge case abbreviations before splitting
+     let processed = text;
+     
+     // Handle room abbreviations specifically (case insensitive)
+     processed = processed.replace(/\bRm([A-Z])/g, 'Room $1'); // RmTmp → Room Tmp
+     processed = processed.replace(/\bZn([A-Z])/g, 'Zone $1'); // ZnTmp → Zone Tmp  
+     processed = processed.replace(/\bSpc([A-Z])/g, 'Space $1'); // SpcTmp → Space Tmp
+     processed = processed.replace(/\bFlr([A-Z])/g, 'Floor $1'); // FlrTmp → Floor Tmp
+     
+     // Handle other common edge cases
+     processed = processed.replace(/\bEq([A-Z])/g, 'Equipment $1'); // EqSts → Equipment Sts
+     processed = processed.replace(/\bDr([A-Z])/g, 'Drive $1'); // DrSpd → Drive Spd
+     processed = processed.replace(/\bMtr([A-Z])/g, 'Motor $1'); // MtrSpd → Motor Spd
+     
      // Split on camelCase, underscores, hyphens, and numbers
-     return text
+     return processed
        .replace(/([a-z])([A-Z])/g, '$1 $2') // Split camelCase
        .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2') // Split consecutive capitals
        .replace(/([a-zA-Z])(\d)/g, '$1 $2') // Split letters from numbers
        .replace(/(\d)([a-zA-Z])/g, '$1 $2') // Split numbers from letters
        .split(/[\s_-]+/) // Split on whitespace, underscores, hyphens
-       .filter(part => part.length > 0);
+       .filter(part => part.length > 0 && part.length > 1); // Filter out single characters and empty parts
    }
 
   /**
@@ -374,20 +538,80 @@ export class BACnetNormalizationEngine {
     let method: HaystackNormalization['method'] = 'pattern-match';
     const appliedTags = new Set<string>();
 
-    // Step 1: Apply vendor-specific mappings if available
+    // Step 1: Enhanced vendor-specific mappings - Recommendation #1
+    let vendorSpecificApplied = false;
     if (connector?.vendorName && VENDOR_SPECIFIC_MAPPINGS[connector.vendorName]) {
       const vendorMappings = VENDOR_SPECIFIC_MAPPINGS[connector.vendorName];
+      
+      // First pass: Split the name and apply vendor mappings to individual parts
+      const nameParts = this.splitCamelCase(normalizedName);
+      let processedParts: string[] = [];
+      
+      for (const part of nameParts) {
+        let processedPart = part;
+        let partMatched = false;
+        
+        // Check exact matches first (higher confidence)
+        for (const [abbrev, replacement] of Object.entries(vendorMappings)) {
+          if (part.toLowerCase() === abbrev.toLowerCase()) {
+            processedPart = replacement;
+            confidence += 20;
+            vendorSpecificApplied = true;
+            partMatched = true;
+            method = 'vendor-specific';
+            break;
+          }
+        }
+        
+        // If no exact match, try partial matches within the part
+        if (!partMatched) {
+          for (const [abbrev, replacement] of Object.entries(vendorMappings)) {
+            const regex = new RegExp(`\\b${abbrev}\\b`, 'gi');
+            if (regex.test(processedPart)) {
+              processedPart = processedPart.replace(regex, replacement);
+              confidence += 12;
+              vendorSpecificApplied = true;
+              method = 'vendor-specific';
+            }
+          }
+        }
+        
+        processedParts.push(processedPart);
+      }
+      
+      normalizedName = processedParts.join(' ');
+      
+      // Second pass: Check for vendor-specific patterns in the full string
       for (const [abbrev, replacement] of Object.entries(vendorMappings)) {
-        const regex = new RegExp(`\\b${abbrev}\\b`, 'gi');
-        if (regex.test(normalizedName)) {
-          normalizedName = normalizedName.replace(regex, replacement);
-          confidence += 15;
-          method = 'vendor-specific';
+        // Handle compound abbreviations and case variations
+        const patterns = [
+          new RegExp(`\\b${abbrev}\\b`, 'gi'),           // Exact word boundaries
+          new RegExp(`^${abbrev}([A-Z])`, 'g'),          // Start of camelCase
+          new RegExp(`([a-z])${abbrev}([A-Z])`, 'g'),    // Middle of camelCase
+          new RegExp(`${abbrev}$`, 'gi')                 // End of string
+        ];
+        
+        for (const pattern of patterns) {
+          if (pattern.test(normalizedName)) {
+            normalizedName = normalizedName.replace(pattern, (match, ...groups) => {
+              vendorSpecificApplied = true;
+              confidence += 8;
+              method = 'vendor-specific';
+              
+              // Preserve camelCase structure if needed
+              if (groups.length > 0) {
+                return groups.length === 2 ? 
+                  `${groups[0]}${replacement} ${groups[1]}` : 
+                  `${replacement} ${groups[0]}`;
+              }
+              return replacement;
+            });
+          }
         }
       }
     }
 
-         // Step 2: Apply standard BACnet abbreviation mappings
+         // Step 2: Apply standard BACnet abbreviation mappings with multiple passes
      // First, split camelCase and handle compound abbreviations
      const parts = this.splitCamelCase(normalizedName);
      let expandedParts: string[] = [];
@@ -396,10 +620,10 @@ export class BACnetNormalizationEngine {
        let expandedPart = part;
        let partExpanded = false;
        
-       // Try to match each part with abbreviations
+       // Try to match each part with abbreviations (exact match first)
        for (const [abbrev, fullForm] of Object.entries(BACNET_ABBREVIATIONS)) {
          const regex = new RegExp(`^${abbrev}$`, 'i');
-         if (regex.test(part)) {
+         if (regex.test(expandedPart)) {
            expandedPart = fullForm;
            partExpanded = true;
            confidence += 15;
@@ -414,12 +638,13 @@ export class BACnetNormalizationEngine {
        // If no exact match, try partial matches for compound words
        if (!partExpanded) {
          for (const [abbrev, fullForm] of Object.entries(BACNET_ABBREVIATIONS)) {
-           // Only try partial matches for longer abbreviations and avoid double replacements
-           if (abbrev.length > 2 && part.toLowerCase().includes(abbrev.toLowerCase()) && !expandedPart.toLowerCase().includes(fullForm.toLowerCase())) {
+           // Try partial matches within words
+           if (abbrev.length >= 2 && expandedPart.toLowerCase().includes(abbrev.toLowerCase()) && !expandedPart.toLowerCase().includes(fullForm.toLowerCase())) {
              const regex = new RegExp(`\\b${abbrev}\\b`, 'gi');
-             if (regex.test(part)) {
-               expandedPart = part.replace(regex, fullForm);
+             if (regex.test(expandedPart)) {
+               expandedPart = expandedPart.replace(regex, fullForm);
                confidence += 8;
+               partExpanded = true;
                
                const tags = this.getTagsForTerm(fullForm.toLowerCase());
                tags.forEach(tag => appliedTags.add(tag));
@@ -433,6 +658,25 @@ export class BACnetNormalizationEngine {
      }
      
      normalizedName = expandedParts.join(' ');
+     
+     // Step 2.5: Additional pass to catch any remaining abbreviations in the full string
+     let previousName = '';
+     let passCount = 0;
+     while (normalizedName !== previousName && passCount < 3) {
+       previousName = normalizedName;
+       for (const [abbrev, fullForm] of Object.entries(BACNET_ABBREVIATIONS)) {
+         // Case-insensitive word boundary replacement
+         const regex = new RegExp(`\\b${abbrev}\\b`, 'gi');
+         if (regex.test(normalizedName) && !normalizedName.toLowerCase().includes(fullForm.toLowerCase())) {
+           normalizedName = normalizedName.replace(regex, fullForm);
+           confidence += 5;
+           
+           const tags = this.getTagsForTerm(fullForm.toLowerCase());
+           tags.forEach(tag => appliedTags.add(tag));
+         }
+       }
+       passCount++;
+     }
 
     // Step 3: Add contextual information based on equipment type
     if (equipmentType) {
@@ -484,13 +728,13 @@ export class BACnetNormalizationEngine {
     const type = equipmentType.toUpperCase();
     switch (type) {
       case 'AHU':
-        return 'AHU';
+        return 'Air Handling Unit';
       case 'VAV':
-        return 'VAV';
+        return 'Variable Air Volume';
       case 'RTU':
-        return 'RTU';
+        return 'Rooftop Unit';
       case 'FCU':
-        return 'FCU';
+        return 'Fan Coil Unit';
       case 'CHILLER':
         return 'Chiller';
       case 'BOILER':

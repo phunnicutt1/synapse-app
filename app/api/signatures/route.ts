@@ -28,3 +28,16 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: e.message }, { status: 404 });
     }
 }
+
+export async function DELETE(request: Request) {
+    const { id } = await request.json();
+    if (!id) {
+        return NextResponse.json({ error: 'Signature ID is required' }, { status: 400 });
+    }
+    try {
+        database.deleteSignature(id);
+        return NextResponse.json({ success: true, message: 'Signature deleted successfully' });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 404 });
+    }
+}

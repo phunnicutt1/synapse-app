@@ -34,6 +34,16 @@ const updateSignature = async (id: string, updates: Partial<EquipmentSignature>)
   return res.json();
 };
 
+const deleteSignature = async (id: string) => {
+  const res = await fetch('/api/signatures', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+  if (!res.ok) throw new Error('Failed to delete signature');
+  return res.json();
+};
+
 const createSignature = async (signatureData: Omit<EquipmentSignature, 'id'>) => {
   const res = await fetch('/api/signatures', {
     method: 'POST',
@@ -356,6 +366,7 @@ export function SignatureTemplatesPanel() {
     toggleSignatureSelection,
     clearSignatureSelection,
     updateSignatureAnalytics,
+    openSignatureEditModal,
   } = useAppStore();
 
   // Local state for signature management
@@ -364,7 +375,7 @@ export function SignatureTemplatesPanel() {
   const [equipmentTypeFilter, setEquipmentTypeFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [confidenceRange, setConfidenceRange] = useState<[number, number]>([0, 100]);
-  const [showEquipmentView, setShowEquipmentView] = useState(false);
+  const [showEquipmentView, setShowEquipmentView] = useState(true); // Default to equipment view
 
   // Data fetching
   const { data: initData } = useQuery({
@@ -394,6 +405,14 @@ export function SignatureTemplatesPanel() {
   const updateSignatureMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<EquipmentSignature> }) => 
       updateSignature(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['signatures'] });
+      queryClient.invalidateQueries({ queryKey: ['signature-analytics'] });
+    },
+  });
+
+  const deleteSignatureMutation = useMutation({
+    mutationFn: deleteSignature,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['signatures'] });
       queryClient.invalidateQueries({ queryKey: ['signature-analytics'] });
@@ -450,16 +469,17 @@ export function SignatureTemplatesPanel() {
   }, []);
 
   const handleSignatureEdit = useCallback((signatureId: string) => {
-    // TODO: Implement signature editing modal
-    console.log('Edit signature:', signatureId);
-  }, []);
+    openSignatureEditModal(signatureId);
+  }, [openSignatureEditModal]);
 
   const handleSignatureDelete = useCallback(async (signatureId: string) => {
-    if (confirm('Are you sure you want to delete this signature?')) {
-      // TODO: Implement signature deletion
-      console.log('Delete signature:', signatureId);
+    const signature = signatures?.find(s => s.id === signatureId);
+    const signatureName = signature?.name || 'signature';
+    
+    if (confirm(`Are you sure you want to delete "${signatureName}"? This action cannot be undone.`)) {
+      deleteSignatureMutation.mutate(signatureId);
     }
-  }, []);
+  }, [signatures, deleteSignatureMutation]);
 
   const handleSignatureVerify = useCallback(async (signatureId: string) => {
     const updates = { 
@@ -476,9 +496,11 @@ export function SignatureTemplatesPanel() {
       });
     },
     delete: () => {
-      if (confirm(`Delete ${signatureManagement.selectedSignatures.size} selected signatures?`)) {
-        // TODO: Implement batch delete
-        console.log('Batch delete:', Array.from(signatureManagement.selectedSignatures));
+      if (confirm(`Delete ${signatureManagement.selectedSignatures.size} selected signatures? This action cannot be undone.`)) {
+        Array.from(signatureManagement.selectedSignatures).forEach(id => {
+          deleteSignatureMutation.mutate(id);
+        });
+        clearSignatureSelection();
       }
     },
     export: () => {
