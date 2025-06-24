@@ -509,7 +509,7 @@ export function SignatureTemplatesPanel() {
   if (equipmentLoading || signaturesLoading) {
     return (
       <div className="panel">
-        <div className="panel-title">Signature Management</div>
+        <div className="panel-title">{showEquipmentView ? 'Equipment Management' : 'Signature Management'}</div>
         <div className="flex items-center justify-center py-8">
           <div className="text-gray-500">Loading signatures...</div>
         </div>
@@ -520,7 +520,7 @@ export function SignatureTemplatesPanel() {
   if (signaturesError) {
     return (
       <div className="panel">
-        <div className="panel-title">Signature Management</div>
+        <div className="panel-title">{showEquipmentView ? 'Equipment Management' : 'Signature Management'}</div>
         <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
           Error loading signatures. Please try again.
         </div>
@@ -532,7 +532,7 @@ export function SignatureTemplatesPanel() {
     <div className="panel">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <h3 className="panel-title mb-0">Signature Management</h3>
+        <h3 className="panel-title mb-0">{showEquipmentView ? 'Equipment Management' : 'Signature Management'}</h3>
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-500">
             {filteredSignatures.length} of {signatures?.length || 0} signatures

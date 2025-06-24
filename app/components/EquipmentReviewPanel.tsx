@@ -503,126 +503,108 @@ export function EquipmentReviewPanel() {
         
         {equipment && (
           <div className="h-full flex flex-col">
-            <div className="space-y-4 flex-shrink-0">
-              {/* Equipment Header */}
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            {/* Condensed Top Section - Equipment Header and Template Controls */}
+            <div className="flex-shrink-0 border-b border-gray-200">
+              {/* Equipment Header - More Compact */}
+              <div className="bg-blue-50 p-3 border border-blue-200">
                 <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-blue-800">{equipment.id}</h4>
-                    <div className="text-sm text-blue-600 mt-1 space-y-1">
-                      <div>Type: {equipment.equipmentType}</div>
-                      <div>Vendor: {equipment.vendorName || 'Unknown'}</div>
-                      <div>Model: {equipment.modelName || 'Unknown'}</div>
-                      {equipment.bacnetDeviceName && (
-                        <div>BACnet Device: {equipment.bacnetDeviceName}</div>
-                      )}
-                      {equipment.bacnetDeviceStatus && (
-                        <div>Device Status: {equipment.bacnetDeviceStatus}</div>
-                      )}
-                      {equipment.bacnetVersion && (
-                        <div>BACnet Version: {equipment.bacnetVersion}</div>
-                      )}
-                      {equipment.connState && (
-                        <div>Connection: {equipment.connState}</div>
-                      )}
-                      <div>Total Points: {equipment.points.length}</div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-lg font-semibold text-blue-800 mb-1">{equipment.id}</h4>
+                    <div className="text-xs text-blue-600 space-y-0.5">
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+                        <span>Type: {equipment.equipmentType}</span>
+                        <span>Vendor: {equipment.vendorName || 'Unknown'}</span>
+                        <span>Model: {equipment.modelName || 'Unknown'}</span>
+                        {equipment.bacnetDeviceName && <span>Device: {equipment.bacnetDeviceName}</span>}
+                        {equipment.bacnetDeviceStatus && <span>Status: {equipment.bacnetDeviceStatus}</span>}
+                        {equipment.bacnetVersion && <span>Version: {equipment.bacnetVersion}</span>}
+                        {equipment.connState && <span>Connection: {equipment.connState}</span>}
+                        <span>Points: {equipment.points.length}</span>
+                      </div>
                       
-                      {/* Normalization Summary */}
+                      {/* Compact Normalization Summary */}
                       {normalizationStats && (
-                        <div className="mt-2 p-2 bg-blue-100 rounded border border-blue-200">
-                          <div className="text-xs font-medium text-blue-700 mb-1">Normalization Summary:</div>
-                          <div className="text-xs text-blue-600 space-y-1">
-                            <div>Normalized: {normalizationStats.normalizedPoints}/{normalizationStats.totalPoints} points ({normalizationStats.normalizationRate}%)</div>
-                            <div>Average Confidence: {normalizationStats.averageConfidence}%</div>
-                          </div>
+                        <div className="mt-1 p-2 bg-blue-100 rounded text-xs">
+                          <span className="font-medium text-blue-700">Normalization:</span>
+                          <span className="text-blue-600 ml-1">
+                            {normalizationStats.normalizedPoints}/{normalizationStats.totalPoints} ({normalizationStats.normalizationRate}%) • 
+                            Avg Confidence: {normalizationStats.averageConfidence}%
+                          </span>
                         </div>
                       )}
                       
+                      {/* Compact Additional Info */}
                       {equipment.fullDescription && (
-                        <div className="mt-2 p-2 bg-blue-100 rounded border border-blue-200">
-                          <div className="text-xs font-medium text-blue-700 mb-1">Full Description:</div>
-                          <div className="text-xs text-blue-600">{equipment.fullDescription}</div>
-                        </div>
-                      )}
-                      {equipment.additionalDescriptiveFields && Object.keys(equipment.additionalDescriptiveFields).length > 0 && (
-                        <div className="mt-2 p-2 bg-blue-100 rounded border border-blue-200">
-                          <div className="text-xs font-medium text-blue-700 mb-1">Additional Information:</div>
-                          <div className="text-xs text-blue-600 space-y-1">
-                            {Object.entries(equipment.additionalDescriptiveFields).map(([key, value]) => (
-                              <div key={key}>
-                                <span className="font-medium">
-                                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim()}:
-                                </span> {value}
-                              </div>
-                            ))}
-                          </div>
+                        <div className="mt-1 p-1 bg-blue-100 rounded text-xs">
+                          <span className="font-medium text-blue-700">Description:</span>
+                          <span className="text-blue-600 ml-1 truncate">{equipment.fullDescription}</span>
                         </div>
                       )}
                     </div>
                   </div>
                   <button 
                     onClick={openEditModal}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition text-sm flex-shrink-0"
+                    className="px-3 py-1.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition flex-shrink-0 ml-3"
                   >
                     Manage Tracked Points
                   </button>
                 </div>
               </div>
 
-              {/* Template Status Indicator */}
-              {appliedSignature && (
-                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                  <div className="flex items-center">
-                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                    <span className="font-medium text-green-800">Template Applied: </span>
-                    <span className="text-green-700 ml-1">{appliedSignature.name}</span>
+              {/* Compact Template Status and Controls */}
+              <div className="p-3 space-y-2">
+                {/* Template Status Indicator */}
+                {appliedSignature && (
+                  <div className="bg-green-50 px-3 py-2 rounded border border-green-200">
+                    <div className="flex items-center text-sm">
+                      <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                      <span className="font-medium text-green-800">Template: </span>
+                      <span className="text-green-700 ml-1">{appliedSignature.name}</span>
+                      <span className="text-green-600 ml-2 text-xs">
+                        ({displayPoints.length}/{equipment.points.length} points)
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-xs text-green-600 mt-1">
-                    Showing {displayPoints.length} tracked points of {equipment.points.length} available points
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* Apply Existing Signature Section */}
-              <div className="bg-gray-50 p-4 rounded-lg border">
-                <h5 className="font-medium text-gray-700 mb-3">
-                  {appliedSignature ? 'Change Template' : 'Apply Template'}
-                </h5>
-                <div className="flex gap-2">
-                  <select
-                    value={selectedSignatureId}
-                    onChange={(e) => setSelectedSignatureId(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">No template</option>
-                    {compatibleSignatures.map((signature) => (
-                      <option key={signature.id} value={signature.id}>
-                        {signature.name} ({signature.pointSignature.length} points, {signature.matchingEquipmentIds.length} equipment)
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleApplySignature}
-                    disabled={appliedSignature?.id === selectedSignatureId}
-                    className="px-4 py-2 bg-green-500 text-white rounded-md disabled:bg-gray-300 hover:bg-green-600 transition text-sm"
-                  >
-                    {selectedSignatureId === '' ? 'Remove' : 'Apply'}
-                  </button>
+                {/* Compact Apply Template Section */}
+                <div className="bg-gray-50 px-3 py-2 rounded border">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700 flex-shrink-0">
+                      {appliedSignature ? 'Change:' : 'Apply:'}
+                    </label>
+                    <select
+                      value={selectedSignatureId}
+                      onChange={(e) => setSelectedSignatureId(e.target.value)}
+                      className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">No template</option>
+                      {compatibleSignatures.map((signature) => (
+                        <option key={signature.id} value={signature.id}>
+                          {signature.name} ({signature.pointSignature.length} pts)
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleApplySignature}
+                      disabled={appliedSignature?.id === selectedSignatureId}
+                      className="px-3 py-1 bg-green-500 text-white rounded text-xs disabled:bg-gray-300 hover:bg-green-600 transition flex-shrink-0"
+                    >
+                      {selectedSignatureId === '' ? 'Remove' : 'Apply'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select and apply a signature template that matches this equipment type.
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {appliedSignature 
-                    ? 'Select a different template or choose "No template" to remove the current one.'
-                    : 'Select and apply a signature template that matches this equipment type.'
-                  }
-                </p>
               </div>
             </div>
           
-            {/* Equipment Points - Scrollable within remaining space */}
-            <div className="flex-1 flex flex-col min-h-0 border-t border-gray-200">
-              <div className="p-4 bg-gray-50 border-b flex-shrink-0 space-y-3">
+            {/* Equipment Points - Now takes up 2/3 of the available space */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="px-3 py-2 bg-gray-50 border-b flex-shrink-0 space-y-2">
                 <div className="flex justify-between items-center">
-                  <h5 className="font-medium text-gray-700">
+                  <h5 className="text-sm font-medium text-gray-700">
                     {appliedSignature 
                       ? `Tracked Points (${displayPoints.length}${searchTerm.length >= 2 || categoryFilter || confidenceFilter !== 'all' || normalizationFilter !== 'all' ? ` filtered` : ''})` 
                       : `Equipment Points (${displayPoints.length}${searchTerm.length >= 2 || categoryFilter || confidenceFilter !== 'all' || normalizationFilter !== 'all' ? ` filtered` : ''})`
@@ -632,14 +614,14 @@ export function EquipmentReviewPanel() {
                     onClick={() => setExpandedEquipmentId(
                       expandedEquipmentId === equipment.id ? null : equipment.id
                     )}
-                    className="px-3 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                    className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                   >
                     {expandedEquipmentId === equipment.id ? 'Collapse' : 'Expand All'}
                   </button>
                 </div>
                 
-                {/* Enhanced Search and Filters */}
-                <div className="space-y-3">
+                {/* Compact Search and Filters */}
+                <div className="space-y-2">
                   {/* Search Bar */}
                   <div className="relative">
                     <input
@@ -647,27 +629,26 @@ export function EquipmentReviewPanel() {
                       placeholder="Search points by name, normalized name, description, or tags..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     />
                     {searchTerm && (
                       <button
                         onClick={() => setSearchTerm('')}
                         className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     )}
                   </div>
                   
-                  {/* Filter Controls */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    {/* Category Filter */}
+                  {/* Compact Filter Controls */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
                     <select
                       value={categoryFilter}
                       onChange={(e) => setCategoryFilter(e.target.value)}
-                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="">All Categories</option>
                       {availableCategories.map(category => (
@@ -677,11 +658,10 @@ export function EquipmentReviewPanel() {
                       ))}
                     </select>
                     
-                    {/* Confidence Filter */}
                     <select
                       value={confidenceFilter}
                       onChange={(e) => setConfidenceFilter(e.target.value as any)}
-                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="all">All Confidence</option>
                       <option value="high">High (80%+)</option>
@@ -690,11 +670,10 @@ export function EquipmentReviewPanel() {
                       <option value="none">No Data</option>
                     </select>
                     
-                    {/* Normalization Filter */}
                     <select
                       value={normalizationFilter}
                       onChange={(e) => setNormalizationFilter(e.target.value as any)}
-                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="all">All Points</option>
                       <option value="normalized">Normalized Only</option>
@@ -719,14 +698,14 @@ export function EquipmentReviewPanel() {
                 </div>
                 
                 {(searchTerm.length >= 2 || categoryFilter || confidenceFilter !== 'all' || normalizationFilter !== 'all') && displayPoints.length === 0 && (
-                  <div className="text-sm text-gray-500 italic">
+                  <div className="text-xs text-gray-500 italic">
                     No points found matching current filters
                   </div>
                 )}
               </div>
             
               <div className="flex-1 overflow-y-auto">
-                <div className="p-4 space-y-3">
+                <div className="p-3 space-y-3">
                   {displayPoints.map((point, index) => (
                     <PointCard
                       key={point.id}
