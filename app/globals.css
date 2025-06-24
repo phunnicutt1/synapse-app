@@ -65,7 +65,7 @@ body {
 }
 
 .panel-title {
-  @apply text-xl font-bold border-b border-gray-100 pb-4 mb-6 text-gray-800;
+  @apply text-xl font-bold border-b border-gray-100 pb-4 mb-1 text-gray-800;
   background: linear-gradient(135deg, var(--color-gray-800) 0%, var(--color-gray-600) 100%);
   -webkit-background-clip: text;
   /* -webkit-text-fill-color: transparent; */

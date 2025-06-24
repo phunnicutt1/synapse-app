@@ -31,14 +31,14 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-8">
       {/* Enhanced Header */}
-      <header className="mb-10">
+      <header className="mb-3">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 lg:gap-0">
-          <div className="space-y-2">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
-              Synapse Point Mapper
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
+              CxAlloy Equipment-Point Mapper
             </h1>
-            <p className="text-lg text-gray-600 font-medium max-w-2xl leading-relaxed">
-              Intelligently map BACnet data to CxAlloy commissioning projects with advanced semantic analysis.
+            <p className="text-md text-gray-600 font-medium max-w-2xl leading-relaxed">
+              Intelligently map BACnet data with advanced analysis.
             </p>
           </div>
           

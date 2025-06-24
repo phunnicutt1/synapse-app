@@ -48,6 +48,8 @@ const BACNET_ABBREVIATIONS: Record<string, string> = {
   'Dpr': 'Damper',
   'Dmp': 'Damper',
   'Dmpr': 'Damper',
+  'Da': 'Discharge Air',
+  'Radmp': 'Return Air Damper',
   'Pos': 'Position',
   
   // Water systems

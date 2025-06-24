@@ -603,9 +603,9 @@ export function SignatureTemplatesPanel() {
   if (equipmentLoading || signaturesLoading) {
     return (
       <div className="panel">
-        <div className="panel-title">{showEquipmentView ? 'Equipment Management' : 'Signature Management'}</div>
+        <div className="panel-title">{showEquipmentView ? 'Equipment Mngt' : 'Signature Management'}</div>
         <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Loading signatures...</div>
+        {showEquipmentView ? ' ' : '<div className="text-gray-500">Loading signatures...</div>'}
         </div>
       </div>
     );
@@ -626,11 +626,13 @@ export function SignatureTemplatesPanel() {
     <div className="panel">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <h3 className="panel-title mb-0">{showEquipmentView ? 'Equipment Management' : 'Signature Management'}</h3>
+        <h3 className="panel-title mb-0">{showEquipmentView ? 'Equip Management' : 'Signature Management'}</h3>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">
-            {filteredSignatures.length} of {signatures?.length || 0} signatures
-          </span>
+          {!showEquipmentView && (
+            <span className="text-sm text-gray-500">
+              {filteredSignatures.length} of {signatures?.length || 0} signatures
+            </span>
+          )}
           <button
             onClick={() => setShowEquipmentView(!showEquipmentView)}
             className={`px-3 py-1 text-xs rounded transition-colors ${
