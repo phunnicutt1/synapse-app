@@ -22,6 +22,37 @@ const createSignature = async (signatureData: any) => {
     return res.json();
 };
 
+// Point categorization based on semantic classification (same as main app)
+const categorizePoint = (point: BacnetPoint): string => {
+  if (point.semanticMetadata?.equipmentSpecific) {
+    const classification = point.semanticMetadata.reasoning.find(r => 
+      r.includes('Temperature') || r.includes('Pressure') || r.includes('Flow') || 
+      r.includes('Status') || r.includes('Speed') || r.includes('Occupancy')
+    );
+    if (classification) {
+      if (classification.includes('Temperature')) return 'Temperature';
+      if (classification.includes('Pressure')) return 'Pressure';
+      if (classification.includes('Flow') || classification.includes('Airflow')) return 'Airflow';
+      if (classification.includes('Status') || classification.includes('Occupancy')) return 'Status';
+      if (classification.includes('Speed') || classification.includes('Fan')) return 'Control';
+    }
+  }
+  
+  // Fallback to basic categorization based on point properties
+  if (point.writable) return 'Setpoint';
+  if (point.kind === 'Bool') return 'Status';
+  if (point.unit) return 'Sensor';
+  return 'Other';
+};
+
+// Get confidence badge styling (same as main app)
+const getConfidenceBadge = (confidence?: number) => {
+  if (!confidence) return { color: 'bg-gray-100 text-gray-600', text: 'No Data' };
+  if (confidence >= 90) return { color: 'bg-green-100 text-green-800', text: `${confidence}%` };
+  if (confidence >= 70) return { color: 'bg-yellow-100 text-yellow-800', text: `${confidence}%` };
+  return { color: 'bg-red-100 text-red-800', text: `${confidence}%` };
+};
+
 export function EditSignatureModal() {
     const { isEditModalOpen, closeEditModal, selectedEquipmentId } = useAppStore();
     const queryClient = useQueryClient();
@@ -86,6 +117,20 @@ export function EditSignatureModal() {
         mutation.mutate(signatureData);
     };
 
+    // Highlight text function (same as main app)
+    const highlightText = (text: string, searchTerm: string) => {
+        if (!searchTerm || searchTerm.length < 2) return text;
+        
+        const regex = new RegExp(`(${searchTerm})`, 'gi');
+        const parts = text.split(regex);
+        
+        return parts.map((part, i) => 
+          regex.test(part) ? (
+            <mark key={i} className="bg-yellow-200 px-1 rounded">{part}</mark>
+          ) : part
+        );
+    };
+
     if (!isEditModalOpen || !equipment) return null;
 
     const allPossiblePoints = equipment.points.map(({ dis, kind, unit, bacnetDesc }) => ({ 
@@ -109,9 +154,11 @@ export function EditSignatureModal() {
         );
         
         const nameMatch = point.dis.toLowerCase().includes(searchLower);
+        const normalizedMatch = originalPoint?.normalizedName?.toLowerCase().includes(searchLower);
         const descMatch = originalPoint?.bacnetDesc?.toLowerCase().includes(searchLower) || false;
+        const tagMatch = originalPoint?.haystackTags?.some(tag => tag.toLowerCase().includes(searchLower));
         
-        return nameMatch || descMatch;
+        return nameMatch || normalizedMatch || descMatch || tagMatch;
     });
 
     return (
@@ -182,7 +229,7 @@ export function EditSignatureModal() {
                         <div className="relative mb-3">
                             <input
                                 type="text"
-                                placeholder="Search points by name or description..."
+                                placeholder="Search points by name, normalized name, description, or tags..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -206,107 +253,125 @@ export function EditSignatureModal() {
                         )}
 
                         <div className="flex-1 overflow-y-auto border rounded-md bg-gray-50 p-3 min-h-0">
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {filteredPoints.sort((a,b) => a.dis.localeCompare(b.dis)).map(point => {
                                     const pointKey = `${point.dis}|${point.kind}|${point.unit || ''}`;
-                                    const isIncluded = points.some(p => `${p.dis}|${p.kind}|${p.unit || ''}` === pointKey);
+                                    const isTracked = points.some(p => `${p.dis}|${p.kind}|${p.unit || ''}` === pointKey);
                                     
-                                    // Find the original point to get all data including bacnetDesc and writable
+                                    // Find the original point to get all data
                                     const originalPoint = equipment?.points.find(p => 
                                         p.dis === point.dis && 
                                         p.kind === point.kind && 
                                         (p.unit || '') === (point.unit || '')
                                     );
                                     
+                                    if (!originalPoint) return null;
+                                    
+                                    const category = categorizePoint(originalPoint);
+                                    const confidenceBadge = getConfidenceBadge(originalPoint.normalizationConfidence);
+                                    
                                     return (
-                                        <div key={pointKey} className="bg-white rounded border p-3 hover:bg-gray-50">
-                                            <div className="flex items-center">
-                                                {/* Left side: Green dot and point info */}
-                                                <div className="flex items-start min-w-0">
-                                                    {/* Hidden checkbox for functionality */}
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isIncluded}
-                                                        onChange={() => handlePointToggle(point)}
-                                                        className="hidden"
-                                                    />
-                                                    
-                                                    {/* Green dot indicator */}
-                                                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                                                    
-                                                    {/* Point info */}
-                                                    <div className="min-w-0">
-                                                        <div className="font-medium text-gray-900 truncate">{point.dis}</div>
-                                                        {originalPoint?.bacnetDesc && originalPoint.bacnetDesc !== point.dis && (
-                                                            <div className="text-sm text-gray-500 truncate">"{originalPoint.bacnetDesc}"</div>
+                                        <div key={pointKey} className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all">
+                                            <div className="p-4">
+                                                {/* Point Header */}
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div className="flex-1 min-w-0">
+                                                        {/* Original Name */}
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="text-xs text-gray-500 font-medium">ORIGINAL:</span>
+                                                            <span className="font-medium text-gray-800 truncate">
+                                                                {highlightText(originalPoint.dis, searchTerm)}
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        {/* Normalized Name */}
+                                                        {originalPoint.normalizedName ? (
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-xs text-blue-600 font-medium">NORMALIZED:</span>
+                                                                <span className="font-semibold text-blue-800 truncate">
+                                                                    {highlightText(originalPoint.normalizedName, searchTerm)}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-xs text-gray-400 font-medium">NORMALIZED:</span>
+                                                                <span className="text-gray-400 italic text-sm">Not normalized</span>
+                                                            </div>
                                                         )}
+                                                        
+                                                        {/* Description */}
+                                                        <div className="text-sm text-gray-600 truncate">
+                                                            {highlightText(originalPoint.bacnetDesc, searchTerm)}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Point Metadata Badges */}
+                                                    <div className="flex flex-col items-end gap-1 ml-2">
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                            category === 'Temperature' ? 'bg-red-100 text-red-700' :
+                                                            category === 'Pressure' ? 'bg-purple-100 text-purple-700' :
+                                                            category === 'Airflow' ? 'bg-blue-100 text-blue-700' :
+                                                            category === 'Status' ? 'bg-green-100 text-green-700' :
+                                                            category === 'Control' ? 'bg-orange-100 text-orange-700' :
+                                                            category === 'Setpoint' ? 'bg-indigo-100 text-indigo-700' :
+                                                            category === 'Sensor' ? 'bg-teal-100 text-teal-700' :
+                                                            'bg-gray-100 text-gray-700'
+                                                        }`}>
+                                                            {category}
+                                                        </span>
+                                                        
+                                                        {/* Confidence Badge */}
+                                                        <div className="flex items-center gap-1">
+                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${confidenceBadge.color}`}>
+                                                                {confidenceBadge.text}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                {/* Point metadata tags with left padding */}
-                                                <div className="flex flex-wrap items-center gap-1 flex-1" style={{paddingLeft: '35px'}}>
-                                                    {/* BACnet Point Type */}
-                                                    {originalPoint?.bacnetCur && (() => {
-                                                        const bacnetType = getBacnetPointType(originalPoint.bacnetCur);
-                                                        return bacnetType ? (
-                                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getBacnetTypeColor(bacnetType)}`}>
-                                                                {bacnetType}
-                                                            </span>
-                                                        ) : null;
-                                                    })()}
-                                                    
-                                                    {/* Kind */}
-                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                                        {point.kind}
+                                                {/* Point Properties */}
+                                                <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="font-medium">Type:</span> {originalPoint.kind}
                                                     </span>
-                                                    
-                                                    {/* Unit */}
-                                                    {point.unit && (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                            {point.unit}
+                                                    {originalPoint.unit && (
+                                                        <span className="flex items-center gap-1">
+                                                            <span className="font-medium">Unit:</span> {originalPoint.unit}
                                                         </span>
                                                     )}
-                                                    
-                                                    {/* Writable status */}
-                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                                        originalPoint?.writable ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                                                    <span className={`px-2 py-1 rounded ${
+                                                        originalPoint.writable ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
                                                     }`}>
-                                                        {originalPoint?.writable ? 'R/W' : 'R'}
+                                                        {originalPoint.writable ? 'Writable' : 'Read-Only'}
                                                     </span>
-                                                    
-                                                    {/* Trio Tags */}
-                                                    {getTrioTags(originalPoint).map(tag => (
-                                                        <span key={tag} className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTrioTagColor(tag)}`}>
-                                                            {tag}
-                                                        </span>
-                                                    ))}
                                                 </div>
 
-                                                {/* Right side: Track/Disable buttons */}
-                                                <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
+                                                {/* Haystack Tags */}
+                                                {originalPoint.haystackTags && originalPoint.haystackTags.length > 0 && (
+                                                    <div className="mb-3">
+                                                        <div className="text-xs font-medium text-gray-700 mb-1">Haystack Tags:</div>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {originalPoint.haystackTags.map((tag, idx) => (
+                                                                <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded border border-blue-200">
+                                                                    {tag}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Track Point Button */}
+                                                <div className="flex justify-end">
                                                     <button
-                                                        onClick={() => !isIncluded && handlePointToggle(point)}
-                                                        disabled={isIncluded}
-                                                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                                                            isIncluded 
-                                                                ? 'bg-green-500 text-white cursor-default' 
-                                                                : 'bg-green-100 text-green-600 hover:bg-green-200'
+                                                        onClick={() => handlePointToggle(point)}
+                                                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                                            isTracked 
+                                                                ? 'bg-green-500 text-white hover:bg-green-600' 
+                                                                : 'bg-green-100 text-green-700 hover:bg-green-200'
                                                         }`}
-                                                        title={isIncluded ? "Currently tracked" : "Click to track"}
+                                                        title={isTracked ? "Click to untrack this point" : "Click to track this point"}
                                                     >
                                                         Track Point
-                                                    </button>
-                                                    <button
-                                                        onClick={() => isIncluded && handlePointToggle(point)}
-                                                        disabled={!isIncluded}
-                                                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                                                            !isIncluded 
-                                                                ? 'bg-red-500 text-white cursor-default' 
-                                                                : 'bg-red-100 text-red-600 hover:bg-red-200'
-                                                        }`}
-                                                        title={!isIncluded ? "Currently disabled" : "Click to disable"}
-                                                    >
-                                                        ✕
                                                     </button>
                                                 </div>
                                             </div>
@@ -336,81 +401,4 @@ export function EditSignatureModal() {
             </div>
         </div>
     );
-}
-
-// Function to extract BACnet point type from bacnetCur
-function getBacnetPointType(bacnetCur: string): string {
-    if (!bacnetCur) return '';
-    
-    // Extract the prefix (letters before numbers)
-    const match = bacnetCur.match(/^([A-Z]+)/);
-    return match ? match[1] : '';
-}
-
-// Function to get color for BACnet point type
-function getBacnetTypeColor(type: string): string {
-    switch (type) {
-        case 'AI': return 'bg-green-100 text-green-800';
-        case 'AO': return 'bg-blue-100 text-blue-800';
-        case 'AV': return 'bg-purple-100 text-purple-800';
-        case 'BI': return 'bg-yellow-100 text-yellow-800';
-        case 'BO': return 'bg-orange-100 text-orange-800';
-        case 'BV': return 'bg-red-100 text-red-800';
-        case 'MSV': return 'bg-indigo-100 text-indigo-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-}
-
-// Function to extract trio tags from point data
-function getTrioTags(originalPoint: any): string[] {
-    const tags: string[] = [];
-    
-    // Check for CMD tag (command points)
-    if (originalPoint?.writable && originalPoint?.bacnetWrite) {
-        tags.push('CMD');
-    }
-    
-    // Check for other common patterns in point names/descriptions
-    if (originalPoint?.dis || originalPoint?.bacnetDesc) {
-        const text = `${originalPoint.dis || ''} ${originalPoint.bacnetDesc || ''}`.toLowerCase();
-        
-        // Check for alarm-related points
-        if (text.includes('alarm') || text.includes('fault') || text.includes('alert')) {
-            tags.push('ALARM');
-        }
-        
-        // Check for sensor points (typically read-only with specific units)
-        if (!originalPoint?.writable && (originalPoint?.unit || originalPoint?.kind === 'Number')) {
-            if (text.includes('temp') || text.includes('pressure') || text.includes('flow') || 
-                text.includes('level') || text.includes('humidity') || text.includes('sensor')) {
-                tags.push('SENSOR');
-            }
-        }
-        
-        // Check for setpoint/control points
-        if (text.includes('setpoint') || text.includes('setp') || text.includes('sp ') || 
-            text.includes('control') || text.includes('ctrl')) {
-            tags.push('SP');
-        }
-        
-        // Check for status points
-        if (text.includes('status') || text.includes('state') || text.includes('mode') ||
-            originalPoint?.kind === 'Bool' || originalPoint?.kind === 'Str') {
-            tags.push('STATUS');
-        }
-    }
-    
-    return tags;
-}
-
-// Function to get color for trio tags
-function getTrioTagColor(tag: string): string {
-    switch (tag) {
-        case 'CMD': return 'bg-cyan-100 text-cyan-800';
-        case 'ALARM': return 'bg-red-100 text-red-800';
-        case 'SENSOR': return 'bg-green-100 text-green-800';
-        case 'SP': return 'bg-orange-100 text-orange-800';
-        case 'STATUS': return 'bg-yellow-100 text-yellow-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
 }
