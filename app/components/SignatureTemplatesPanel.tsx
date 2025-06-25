@@ -252,21 +252,16 @@ const SignatureCard: React.FC<SignatureCardProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
           </svg>
           <span className="mapping-details-label">
-            Point Signature ({signature.pointSignature.length} points)
+            Key Points:
           </span>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {signature.pointSignature.slice(0, 5).map((point, idx) => (
-            <span key={idx} className="px-3 py-1 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 text-xs rounded-lg border border-blue-200 font-medium">
-              {point.dis}
-            </span>
+        <ul className="list-disc list-inside space-y-1 ml-6">
+          {signature.pointSignature.map((point, idx) => (
+            <li key={idx} className="text-sm text-gray-700">
+              {point.dis.toLowerCase()}
+            </li>
           ))}
-          {signature.pointSignature.length > 5 && (
-            <span className="px-3 py-1 bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 text-xs rounded-lg border border-gray-200 font-medium">
-              +{signature.pointSignature.length - 5} more
-            </span>
-          )}
-        </div>
+        </ul>
       </div>
 
       {/* Analytics */}

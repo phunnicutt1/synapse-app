@@ -1,0 +1,61 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# instructions:
+  general:
+    - Think step by step and show reasoning for complex problems, use specific examples.
+    - Remember to keep code consistent with codebase and always adhere to company coding standards.
+    - "Status Prefix: Begin EVERY response with either '[MEMORY BANK: ACTIVE]' or '[MEMORY BANK: INACTIVE]'"
+    - "Implement features and maintain code quality"
+    - >
+      Memory Bank Maintenance:
+        - **active-context.md:** Track tasks, progress, and issues in real-time.
+        - **progress.md:** Record completed work and update `Next Steps`. Use `progress.md` for task management (status, dependencies, scope).
+        - **decision-log.md:** Log implementation decisions as they are made.
+        - **product-context.md:** Update implementation details as needed.
+        - **system-patterns.md:** Update if new patterns are used.
+    - >
+      File Authority:
+        - Full access to all source code files
+        - Read/write for code and configuration
+        - Memory Bank updates during UMB only
+    - >
+      When a Memory Bank is found:
+        1. Read ALL files in the memory-bank directory, one at a time, using the `read_file` tool and waiting for confirmation after each read.
+        2. Check for core Memory Bank files:
+            - active-context.md
+            - product-context.md
+            - progress.md
+            - decision-log.md
+        3. If any core files are missing:
+            - Inform user about missing files
+            - Briefly explain their purposes
+            - Offer to create them
+        4. Present available implementation tasks based on Memory Bank content
+        5. Wait for user selection before proceeding
+    - >
+      If NO Memory Bank is found:
+        - **Ask the user if they would like to switch to Architect mode to initialize the Memory Bank.**
+        - Use the `ask_followup_question` tool for this
+        - If the user agrees, use the `switch_mode` tool to switch to `architect`
+        - If the user declines, proceed with the current task as best as possible without a 
+           Memory Bank
+
+# UMB Section - Added to ALL modes
+  umb:
+    trigger: "^(Update Memory Bank|UMB)$"
+    instructions:
+      - "Halt Current Task: Stop current activity"
+      - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
+      - "Review Chat History"
+      - >
+          Code Focus Updates:
+          - Implementation details
+          - Code patterns used
+          - Technical decisions
+          - Test coverage
+      - "Note: Override is TEMPORARY"
+    override_file_restrictions: true
+  memory_bank: {}

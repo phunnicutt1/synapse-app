@@ -56,6 +56,267 @@ interface PointCardProps {
   onConfidenceAdjust: (pointId: string, newConfidence: number) => void;
 }
 
+interface PointTableRowProps {
+  point: BacnetPoint;
+  index: number;
+  isExpanded: boolean;
+  searchTerm: string;
+  onConfidenceAdjust: (pointId: string, newConfidence: number) => void;
+  onToggleExpand: (pointId: string) => void;
+  equipmentSource?: EquipmentSource;
+  dataSource?: string;
+}
+
+const PointTableRow: React.FC<PointTableRowProps> = ({ 
+  point, 
+  index, 
+  isExpanded, 
+  searchTerm,
+  onConfidenceAdjust,
+  onToggleExpand,
+  equipmentSource,
+  dataSource
+}) => {
+  const [isAdjustingConfidence, setIsAdjustingConfidence] = useState(false);
+  const [tempConfidence, setTempConfidence] = useState(point.normalizationConfidence || 0);
+  
+  const category = categorizePoint(point);
+  const confidenceBadge = getConfidenceBadge(point.normalizationConfidence);
+  
+  const highlightText = (text: string, searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 2) return text;
+    
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, i) => 
+      regex.test(part) ? (
+        <mark key={i} className="bg-yellow-200 px-1 rounded">{part}</mark>
+      ) : part
+    );
+  };
+
+  const handleConfidenceSubmit = () => {
+    onConfidenceAdjust(point.id, tempConfidence);
+    setIsAdjustingConfidence(false);
+  };
+
+  const getPropertyType = (point: BacnetPoint): string => {
+    // Determine if it's a Sensor, Set Point, or CMD based on point characteristics
+    if (point.writable) {
+      // Check if it's a setpoint based on name patterns
+      const namePattern = (point.normalizedName || point.dis).toLowerCase();
+      if (namePattern.includes('setpoint') || namePattern.includes('set point') || 
+          namePattern.includes('sp') || namePattern.includes('stpt')) {
+        return 'Set Point';
+      }
+      return 'CMD';
+    }
+    return 'Sensor';
+  };
+
+  return (
+    <>
+      {/* Main compact row */}
+      <tr className="hover:bg-gray-50 border-b border-gray-100">
+        {/* Expand/Collapse button */}
+        <td className="px-3 py-2 w-8">
+          <button
+            onClick={() => onToggleExpand(point.id)}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            title={isExpanded ? "Collapse details" : "Expand details"}
+          >
+            <svg 
+              className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </td>
+
+        {/* Original/Normalized Name */}
+        <td className="px-3 py-2 min-w-0">
+          <div className="flex flex-col">
+            <div className="font-medium text-gray-800 text-sm truncate">
+              {highlightText(point.dis, searchTerm)}
+            </div>
+            {point.normalizedName ? (
+              <div className="text-xs text-blue-600 truncate">
+                {highlightText(point.normalizedName, searchTerm)}
+              </div>
+            ) : (
+              <div className="text-xs text-gray-400 italic">Not normalized</div>
+            )}
+          </div>
+        </td>
+
+        {/* Kind (Data Type) */}
+        <td className="px-3 py-2 text-xs text-gray-600">
+          <span className="font-medium">{point.kind}</span>
+        </td>
+
+        {/* BACnet ID */}
+        <td className="px-3 py-2 text-xs text-gray-600">
+          <span className="font-mono">{point.bacnetCur}</span>
+        </td>
+
+        {/* Description */}
+        <td className="px-3 py-2 text-xs text-gray-600 max-w-xs">
+          <div className="truncate" title={point.bacnetDesc}>
+            {highlightText(point.bacnetDesc, searchTerm)}
+          </div>
+        </td>
+
+        {/* Unit */}
+        <td className="px-3 py-2 text-xs text-gray-600">
+          <span>{point.unit || '-'}</span>
+        </td>
+
+        {/* Source */}
+        <td className="px-3 py-2 text-xs text-gray-600">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium truncate">{dataSource || 'ConnectorData.csv'}</span>
+            {equipmentSource?.vendorName && (
+              <span className="text-xs text-gray-500 truncate">
+                {equipmentSource.vendorName}
+                {equipmentSource.modelName && ` • ${equipmentSource.modelName}`}
+              </span>
+            )}
+          </div>
+        </td>
+
+        {/* Property Type, W/R Status, and Confidence */}
+        <td className="px-3 py-2 text-right">
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-1 text-xs">
+              <span className="font-medium text-gray-700">
+                {getPropertyType(point)}
+              </span>
+              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                point.writable ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {point.writable ? 'W' : 'R'}
+              </span>
+              {point.normalizationConfidence && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${confidenceBadge.color}`}>
+                  {point.normalizationConfidence}%
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              {point.normalizationConfidence && (
+                <button
+                  onClick={() => setIsAdjustingConfidence(!isAdjustingConfidence)}
+                  className="text-xs text-gray-500 hover:text-gray-700 p-0.5"
+                  title="Adjust confidence"
+                >
+                  ⚙️
+                </button>
+              )}
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      {/* Expanded details row */}
+      {isExpanded && (
+        <tr className="bg-gray-50">
+          <td colSpan={8} className="px-3 py-4">
+            <div className="space-y-3">
+              {/* Confidence Adjustment */}
+              {isAdjustingConfidence && (
+                <div className="p-3 bg-white rounded border">
+                  <div className="text-xs font-medium text-gray-700 mb-2">Adjust Normalization Confidence:</div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={tempConfidence}
+                      onChange={(e) => setTempConfidence(parseInt(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm font-medium w-12">{tempConfidence}%</span>
+                    <button
+                      onClick={handleConfidenceSubmit}
+                      className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      onClick={() => setIsAdjustingConfidence(false)}
+                      className="px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* All Haystack Tags */}
+              {point.haystackTags && point.haystackTags.length > 0 && (
+                <div>
+                  <div className="text-xs font-medium text-gray-700 mb-1">All Haystack Tags:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {point.haystackTags.map((tag, idx) => (
+                      <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded border border-blue-200">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed Properties */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                {/* Basic Properties */}
+                <div className="space-y-2">
+                  <h6 className="font-medium text-gray-700">Properties</h6>
+                  <div className="space-y-1 text-gray-600">
+                    <div><span className="font-medium">BACnet Current:</span> {point.bacnetCur}</div>
+                    <div><span className="font-medium">Point ID:</span> {point.id}</div>
+                    <div><span className="font-medium">Writable:</span> {point.writable ? 'Yes' : 'No'}</div>
+                  </div>
+                </div>
+
+                {/* Semantic Metadata */}
+                {point.semanticMetadata && (
+                  <div className="space-y-2">
+                    <h6 className="font-medium text-gray-700">Semantic Analysis</h6>
+                    <div className="space-y-1 text-gray-600">
+                      <div>
+                        <span className="font-medium">Vendor Specific:</span> 
+                        {point.semanticMetadata.vendorSpecific ? ' Yes' : ' No'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Equipment Specific:</span> 
+                        {point.semanticMetadata.equipmentSpecific ? ' Yes' : ' No'}
+                      </div>
+                      {point.semanticMetadata.reasoning && point.semanticMetadata.reasoning.length > 0 && (
+                        <div>
+                          <span className="font-medium">Reasoning:</span>
+                          <ul className="list-disc list-inside ml-2 mt-1">
+                            {point.semanticMetadata.reasoning.map((reason, idx) => (
+                              <li key={idx} className="text-xs">{reason}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+};
+
 const PointCard: React.FC<PointCardProps> = ({ 
   point, 
   index, 
@@ -277,6 +538,8 @@ export function EquipmentReviewPanel() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [confidenceFilter, setConfidenceFilter] = useState<'all' | 'high' | 'medium' | 'low' | 'none'>('all');
   const [normalizationFilter, setNormalizationFilter] = useState<'all' | 'normalized' | 'not-normalized'>('all');
+  const [expandedPointIds, setExpandedPointIds] = useState<Set<string>>(new Set());
+  const [expandAllPoints, setExpandAllPoints] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: equipment, isLoading, error } = useQuery({
@@ -456,6 +719,37 @@ export function EquipmentReviewPanel() {
     console.log(`Adjusting confidence for point ${pointId} to ${newConfidence}%`);
     // This would typically update the point's normalizationConfidence in the backend
   };
+
+  const handleToggleExpandPoint = (pointId: string) => {
+    setExpandedPointIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pointId)) {
+        newSet.delete(pointId);
+      } else {
+        newSet.add(pointId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleExpandAllPoints = () => {
+    if (expandAllPoints) {
+      // Collapse all points
+      setExpandedPointIds(new Set());
+      setExpandAllPoints(false);
+    } else {
+      // Expand all points
+      const allPointIds = new Set(displayPoints.map(point => point.id));
+      setExpandedPointIds(allPointIds);
+      setExpandAllPoints(true);
+    }
+  };
+
+  // Reset expand all state when filters change
+  useEffect(() => {
+    setExpandAllPoints(false);
+    setExpandedPointIds(new Set());
+  }, [selectedEquipmentId, searchTerm, categoryFilter, confidenceFilter, normalizationFilter]);
 
   // Statistics for normalization summary
   const normalizationStats = useMemo(() => {
@@ -676,12 +970,10 @@ export function EquipmentReviewPanel() {
                     }
                   </h5>
                   <button
-                    onClick={() => setExpandedEquipmentId(
-                      expandedEquipmentId === equipment.id ? null : equipment.id
-                    )}
+                    onClick={handleExpandAllPoints}
                     className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                   >
-                    {expandedEquipmentId === equipment.id ? 'Collapse' : 'Expand All'}
+                    {expandAllPoints ? 'Collapse All' : 'Expand All'}
                   </button>
                 </div>
                 
@@ -770,17 +1062,45 @@ export function EquipmentReviewPanel() {
               </div>
             
               <div className="flex-1 overflow-y-auto">
-                <div className="p-3 space-y-3">
-                  {displayPoints.map((point, index) => (
-                    <PointCard
-                      key={point.id}
-                      point={point}
-                      index={index}
-                      isExpanded={expandedEquipmentId === equipment.id}
-                      searchTerm={searchTerm}
-                      onConfidenceAdjust={handleConfidenceAdjust}
-                    />
-                  ))}
+                <div className="bg-white">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8"></th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kind</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BACnet ID</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayPoints.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="px-3 py-8 text-center text-gray-500">
+                            <div className="text-lg mb-2">📭</div>
+                            <div>No points found matching current filters</div>
+                          </td>
+                        </tr>
+                      ) : (
+                                                 displayPoints.map((point, index) => (
+                          <PointTableRow
+                            key={point.id}
+                            point={point}
+                            index={index}
+                            isExpanded={expandedPointIds.has(point.id)}
+                            searchTerm={searchTerm}
+                            onConfidenceAdjust={handleConfidenceAdjust}
+                            onToggleExpand={handleToggleExpandPoint}
+                            equipmentSource={equipment}
+                            dataSource={`${equipment.id}.trio`}
+                          />
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
